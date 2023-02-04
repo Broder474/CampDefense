@@ -1,0 +1,28 @@
+{
+    "samples":
+    [
+        "glock-19", "barrett-m82"
+    ],
+    "glock-19":
+    {
+        "type": "single-shot",
+        "name": "Glock 19",
+        "max_distance": 15,
+        "shot_damage": 32,
+        "shot_accuracy": 60,
+        "shot_timeout": 0.8,
+        "texture_simple": "resources/textures/weapons/glock-19 S.png",
+        "texture_fire": "resources/textures/weapons/glock-19 F.png"
+    },
+    "barrett-m82":
+    {
+        "type": "single-shot",
+        "name": "Barrett M82",
+        "max_distance": 50,
+        "shot_damage": 75,
+        "shot_accuracy": 70,
+        "shot_timeout": 1.5,
+        "texture_simple": "resources/textures/weapons/barrett-m82 S.png",
+        "texture_fire": "resources/textures/weapons/barrett-m82 F.png"
+    }
+}
