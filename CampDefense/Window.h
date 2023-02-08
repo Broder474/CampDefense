@@ -6,25 +6,19 @@
 #include <SDL_ttf.h>
 #include <map>
 #include <functional>
+#include <filesystem>
 #include "Functions.h"
 #include "World.h"
 #include "Resources.h"
+
+namespace fs = std::filesystem;
 
 class Button
 {
 	using CallBack = std::function<void()>;
 public:
 	template<class O, class M>
-	Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::wstring text, float scale, O* object, M method) :
-		ren(ren), dstrect(dstrect), text_color(text_color), onClick(onClick), font(font), text(text), scale(scale)
-	{
-		this->dstrect.x /= scale;
-		this->dstrect.y /= scale;
-		this->dstrect.w /= scale;
-		this->dstrect.h /= scale;
-		generateTexture();
-		setOnClick(object, method);
-	};
+	Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::wstring text, float scale, O* object, M method);
 	virtual	~Button()
 	{
 		SDL_DestroyTexture(text_texture);
@@ -76,13 +70,14 @@ private:
 class Image
 {
 public:
-	Image(SDL_Renderer* ren, SDL_Texture* texture, SDL_Rect dstrect): ren(ren), texture(texture), dstrect(dstrect) {};
+	Image(SDL_Renderer* ren, SDL_Texture* texture, SDL_Rect dstrect, float scale);
 	~Image() {};
 	void render();
 private:
 	SDL_Renderer* ren;
 	SDL_Texture* texture;
 	SDL_Rect dstrect;
+	float scale;
 };
 
 class Window
@@ -100,6 +95,57 @@ protected:
 	Resources* resources;
 	SDL_Renderer* ren;
 	float scale;
+};
+
+class List
+{
+	class ItemData;
+public:
+	List(SDL_Renderer* ren, SDL_Rect list_rect, SDL_Rect item_rect, SDL_Color bg_list_color, SDL_Color bg_item_color, SDL_Color selected_item_color,
+		SDL_Color text_color, float scale, TTF_Font* font, int scroll_bar_width);
+	~List();
+	void addItem(std::wstring item_name);
+	void removeItem(std::wstring item_name);
+	void render();
+	void scrollBarMove(SDL_Point point);
+	void setScrollBarPointed(SDL_Point point);
+	void setScrollBarPointed(bool isScrollBarPointed);
+	bool getScrollBarPointed() { return is_scroll_bar_pointed; };
+	std::wstring getClickedItem(SDL_Point point);
+
+	std::shared_ptr<ItemData> selected_item = nullptr;
+	std::vector<std::shared_ptr<ItemData>>items;
+private:
+	class ItemData
+	{
+	public:
+		ItemData(SDL_Renderer* ren, std::wstring item_name, SDL_Rect item_rect, TTF_Font* font, SDL_Color text_color, float scale);
+		~ItemData();
+		bool isPointed(int x, int y);
+
+		std::wstring item_name = L"";
+		SDL_Rect item_rect{ 0, 0, 0, 0 };
+		SDL_Texture* text_texture = nullptr;
+		SDL_Rect text_rect{ 0, 0, 0, 0 };
+	};
+	SDL_Renderer* ren;
+	SDL_Rect list_rect{ 0, 0, 0, 0 };
+	SDL_Rect item_rect{ 0, 0, 0, 0 };
+	SDL_Color bg_list_color{ 0, 0, 0, 0 };
+	SDL_Color bg_item_color{ 0, 0, 0, 0 };
+	SDL_Color selected_item_color{ 0, 0, 0, 0 };
+	SDL_Color text_color{ 0, 0, 0, 0 };
+
+	SDL_Color scroll_bar_color_full{ 0, 0, 0, 0 };
+	SDL_Rect scroll_bar_rect_full{ 0, 0, 0, 0 };
+
+	SDL_Color scroll_bar_color_current{ 0, 0, 0, 0 };
+	SDL_Rect scroll_bar_rect_current{ 0, 0, 0, 0 };
+	float scale = 0;
+	TTF_Font* font = nullptr;
+	int total_height = 0;
+	bool is_scroll_bar_pointed = false;
+	SDL_Point scroll_bar_click = { 0, 0 };
 };
 
 class WinMainMenu : public Window
@@ -147,4 +193,55 @@ private:
 	void BtnSaveGame();
 	void BtnLoadGame();
 	void BtnMainMenu();
+};
+
+class WinSaveGame : public Window
+{
+public:
+	WinSaveGame(SDL_Renderer* ren, float scale, std::vector<std::unique_ptr<Window>>& windows, Resources* resources);
+	~WinSaveGame() override;
+
+	void handleEvents() override;
+	void render() override;
+private:
+	std::vector<std::unique_ptr<Button>> buttons;
+	std::vector<std::unique_ptr<Image>> images;
+
+	void BtnSaveGame();
+	void BtnDeleteSave();
+};
+
+class WinLoadGame : public Window
+{
+public:
+	WinLoadGame(SDL_Renderer* ren, float scale, std::vector<std::unique_ptr<Window>>& windows, Resources* resources);
+	~WinLoadGame() override;
+
+	void handleEvents() override;
+	void render() override;
+
+	std::unique_ptr<List> saves_list = nullptr;
+private:
+	std::vector<std::unique_ptr<Button>> buttons;
+
+	void BtnLoadGame();
+	void BtnDeleteSave();
+	void LoadSaves();
+};
+
+class WinDelSave : public Window
+{
+public:
+	WinDelSave(SDL_Renderer* ren, float scale, std::vector<std::unique_ptr<Window>>& windows, Resources* resources, std::unique_ptr<List>& saves_list);
+	~WinDelSave() override;
+
+	void handleEvents() override;
+	void render() override;
+
+private:
+	std::vector<std::unique_ptr<Button>> buttons;
+	std::unique_ptr<List>& saves_list;
+
+	void BtnDelete();
+	void BtnCancel();
 };

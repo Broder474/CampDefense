@@ -10,7 +10,7 @@ using json = nlohmann::json;
 
 struct TextureData
 {
-	SDL_Texture* texture;
+	SDL_Texture* texture = nullptr;
 	SDL_Rect dstrect = { 0, 0, 0, 0 };
 };
 

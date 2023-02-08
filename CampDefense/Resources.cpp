@@ -5,9 +5,9 @@
 Resources::Resources(SDL_Renderer* ren, float scale, const char* weapons_file, const char* gui_file) : ren(ren), display(display)
 {
 	// fonts loading
-	TTF_Font* calibri24(TTF_OpenFont("resources/fonts/calibri.ttf", 24));
+	TTF_Font* calibri24(TTF_OpenFont("resources/fonts/calibri.ttf", 24 / scale));
 	fonts["calibri24"] = calibri24;
-	TTF_Font* calibri64(TTF_OpenFont("resources/fonts/calibri.ttf", 64));
+	TTF_Font* calibri64(TTF_OpenFont("resources/fonts/calibri.ttf", 64 / scale));
 	fonts["calibri64"] = calibri64;
 
 	// read json for weapons

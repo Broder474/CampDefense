@@ -23,7 +23,7 @@ void Game::loop()
 {
     while (getStatus())
     {
-        SDL_Delay(50); // 20 tacts per second
+        SDL_Delay(16); // 60 tacts per second
 
         windows.back()->handleEvents(); // handle events from top window
 
