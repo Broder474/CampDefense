@@ -319,6 +319,102 @@ std::wstring List::getClickedItem(SDL_Point point)
 	return L"";
 }
 
+// TextOutput class
+TextOutput::TextOutput(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color) : ren(ren), font(font), 
+text(text), scale(scale), x(x), y(y), text_color(text_color) 
+{
+	this->x /= scale;
+	this->y /= scale;
+};
+
+TextOutput::TextOutput(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, SDL_Color bg_color) : 
+	ren(ren), font(font), text(text), scale(scale), x(x), y(y), text_color(text_color), bg_color(bg_color) 
+{
+	this->x /= scale;
+	this->y /= scale;
+};
+
+// TextOutputSingleLine class
+TextOutputSingleLine::TextOutputSingleLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color) :
+	TextOutput(ren, font, text, scale, x, y, text_color) 
+{
+	generateTexture(0);
+};
+
+TextOutputSingleLine::TextOutputSingleLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, 
+	SDL_Color bg_color) : TextOutput(ren, font, text, scale, x, y, text_color, bg_color) 
+{
+	generateTexture(1);
+};
+
+TextOutputSingleLine::~TextOutputSingleLine() 
+{
+	SDL_DestroyTexture(text_texture);
+};
+
+void TextOutputSingleLine::generateTexture(int type)
+{
+
+	SDL_Surface* surface = nullptr;
+	if (type == 0)
+		surface = TTF_RenderUNICODE_Blended(font, reinterpret_cast<Uint16 const*>((wchar_t*)text.c_str()), text_color);
+	else if (type == 1)
+		surface = TTF_RenderUNICODE_Shaded(font, reinterpret_cast<Uint16 const*>((wchar_t*)text.c_str()), text_color, bg_color);
+	if (text_texture != nullptr)
+		SDL_DestroyTexture(text_texture);
+	text_texture = SDL_CreateTextureFromSurface(ren, surface);
+	SDL_FreeSurface(surface);
+
+	// remember texture size
+	SDL_Point texture_size = { 0, 0 };
+	SDL_QueryTexture(text_texture, nullptr, nullptr, &texture_size.x, &texture_size.y);
+	text_dstrect = { x, y, texture_size.x, texture_size.y };
+}
+
+void TextOutputSingleLine::render()
+{
+	SDL_RenderCopy(ren, text_texture, nullptr, &text_dstrect);
+}
+
+// TextOutputMultiline class
+TextOutputMultiLine::TextOutputMultiLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, int width) :
+	TextOutput(ren, font, text, scale, x, y, text_color), width(width) 
+{
+	this->width /= scale;
+	generateTexture(0);
+};
+
+TextOutputMultiLine::TextOutputMultiLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, SDL_Color bg_color, int width) :
+	TextOutput(ren, font, text, scale, x, y, text_color, bg_color), width(width) 
+{
+	this->width /= scale;
+	generateTexture(1);
+};
+
+TextOutputMultiLine::~TextOutputMultiLine() 
+{
+	SDL_DestroyTexture(text_texture);
+};
+
+void TextOutputMultiLine::generateTexture(int type)
+{
+	SDL_Surface* surface = nullptr;
+	if (type == 0)
+		surface = TTF_RenderUNICODE_Blended_Wrapped(font, reinterpret_cast<Uint16 const*>((wchar_t*)text.c_str()), text_color, width);
+	else if (type == 1)
+		surface = TTF_RenderUNICODE_Shaded_Wrapped(font, reinterpret_cast<Uint16 const*>((wchar_t*)text.c_str()), text_color, bg_color, width);
+	text_texture = SDL_CreateTextureFromSurface(ren, surface);
+	SDL_FreeSurface(surface);
+	SDL_Point texture_size;
+	SDL_QueryTexture(text_texture, nullptr, nullptr, &texture_size.x, &texture_size.y);
+	text_dstrect = { x, y, texture_size.x, texture_size.y };
+}
+
+void TextOutputMultiLine::render()
+{
+	SDL_RenderCopy(ren, text_texture, nullptr, &text_dstrect);
+}
+
 // WinMainMenu class
 WinMainMenu::WinMainMenu(SDL_Renderer* ren, float scale, std::vector<std::unique_ptr<Window>>& windows, Resources* resources): 
 	Window(ren, scale, windows, resources)
@@ -699,6 +795,10 @@ WinDelSave::WinDelSave(SDL_Renderer* ren, float scale, std::vector<std::unique_p
 	std::unique_ptr<Image_Button>btnCancel(new Image_Button(ren, { 1060, 900, 300, 60 }, { 90, 90, 140, 0 }, resources->fonts["calibri64"], L"No",
 		scale, this, &WinDelSave::BtnCancel, resources->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnCancel));
+
+	std::unique_ptr<TextOutputMultiLine>textAreYouSure(new TextOutputMultiLine(ren, resources->fonts["calibri64"],
+		L"Are you really want to delete the save?", scale, 460, 400, { 0, 0, 255, 0 }, {200, 128, 0, 200}, 1000));
+	static_text.push_back(std::move(textAreYouSure));
 }
 
 WinDelSave::~WinDelSave() {};
@@ -732,6 +832,9 @@ void WinDelSave::handleEvents()
 
 void WinDelSave::render()
 {
+	for (int text = 0; text < static_text.size(); text++)
+		static_text[text]->render();
+
 	for (int btn = 0; btn < buttons.size(); btn++)
 		buttons[btn]->render();
 };

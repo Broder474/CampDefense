@@ -148,6 +148,53 @@ private:
 	SDL_Point scroll_bar_click = { 0, 0 };
 };
 
+class TextOutput
+{
+public:
+	TextOutput(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color);
+	TextOutput(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, SDL_Color bg_color);
+	virtual ~TextOutput() { SDL_DestroyTexture(text_texture); };
+
+	virtual void render() = 0;
+	virtual void generateTexture(int type) = 0;
+protected:
+	float scale = 0;
+	SDL_Renderer* ren = nullptr;
+	TTF_Font* font = nullptr;
+	std::wstring text = L"";
+	int x = 0;
+	int y = 0;
+	SDL_Color text_color = { 0, 0, 0, 0 };
+	SDL_Color bg_color = { 0, 0, 0, 0 };
+	SDL_Texture* text_texture = nullptr;
+	SDL_Rect text_dstrect = { 0, 0, 0, 0 };
+};
+
+class TextOutputSingleLine : public TextOutput
+{
+public:
+	TextOutputSingleLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color);
+	TextOutputSingleLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, SDL_Color bg_color);
+	~TextOutputSingleLine() override;
+
+	void render() override;
+	void generateTexture(int type) override;
+};
+
+class TextOutputMultiLine : public TextOutput
+{
+public:
+	TextOutputMultiLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, int width);
+	TextOutputMultiLine(SDL_Renderer* ren, TTF_Font* font, std::wstring text, float scale, int x, int y, SDL_Color text_color, SDL_Color bg_color, 
+		int width);
+	~TextOutputMultiLine() override;
+
+	void render() override;
+	void generateTexture(int type) override;
+private:
+	int width = 0;
+};
+
 class WinMainMenu : public Window
 {
 public:
@@ -241,6 +288,7 @@ public:
 private:
 	std::vector<std::unique_ptr<Button>> buttons;
 	std::unique_ptr<List>& saves_list;
+	std::vector<std::unique_ptr<TextOutput>> static_text;
 
 	void BtnDelete();
 	void BtnCancel();
