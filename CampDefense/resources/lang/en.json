@@ -1,0 +1,22 @@
+{
+    "WinMainMenu.btnNewGame": "New game",
+    "WinMainMenu.btnLoadGame": "Load game",
+    "WinMainMenu.btnSettings": "Settings",
+    "WinMainMenu.btnExit": "Exit",
+
+    "WinLoadGame.btnLoadGame": "Load",
+    "WinLoadGame.btnDeleteGame": "Delete",
+
+    "WinDelSave.btnDelete": "Yes",
+    "WinDelSave.btnCancel": "No",
+    "WinDelSave.textAreYouSure": "Are you really want to delete the save?",
+
+    "WinGameMenu.btnSaveGame": "Save game",
+    "WinGameMenu.btnLoadGame": "Load game",
+    "WinGameMenu.btnMainMenu": "Main menu",
+
+    "WinSaveGame.btnSaveGame": "Save",
+    "WinSaveGame.btnDeleteGame": "Delete",
+
+    "WinSettings.btnSave": "Save"
+}

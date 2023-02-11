@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <fstream>
+#include <string>
 #include "nlohmann/json.hpp"
 #include "Window.h"
 
@@ -21,13 +23,16 @@ public:
     void setStatus(bool status) { this->status = status; }
     void clean();
 
-    std::vector<std::unique_ptr<Window>> windows;
-    Resources* resources;
-    World* world;
+    void saveSettings(json* settings);
+    void loadResources();
 
-    SDL_Window* win;
-    SDL_Renderer* ren;
-    float scale;
+    std::vector<std::unique_ptr<Window>> windows;
+    Resources* resources = nullptr;
+    Settings settings;
+    World* world = nullptr;
+
+    SDL_Window* win = nullptr;
+    SDL_Renderer* ren = nullptr;
 
 private:
     bool status;

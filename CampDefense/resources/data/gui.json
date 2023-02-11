@@ -1,9 +1,10 @@
 {
     "samples": 
     [
-        "button1", "background1", "background2"
+        "button1", "button2", "background1", "background2"
     ],
     "button1": "resources/textures/gui/button1.png", 
+    "button2": "resources/textures/gui/button2.png",
     "background1": "resources/textures/gui/background1.png",
     "background2": "resources/textures/gui/background2.png"
 }

@@ -1,0 +1,22 @@
+{
+    "WinMainMenu.btnNewGame": "Новая игра",
+    "WinMainMenu.btnLoadGame": "Загрузить игру",
+    "WinMainMenu.btnSettings": "Настройки",
+    "WinMainMenu.btnExit": "Выход",
+
+    "WinLoadGame.btnLoadGame": "Загрузить",
+    "WinLoadGame.btnDeleteGame": "Удалить",
+
+    "WinDelSave.btnDelete": "Да",
+    "WinDelSave.btnCancel": "Нет",
+    "WinDelSave.textAreYouSure": "Вы точно хотите удалить сохранение?",
+
+    "WinGameMenu.btnSaveGame": "Сохранить игру",
+    "WinGameMenu.btnLoadGame": "Загрузить игру",
+    "WinGameMenu.btnMainMenu": "Главное меню",
+
+    "WinSaveGame.btnSaveGame": "Сохранить",
+    "WinSaveGame.btnDeleteGame": "Удалить",
+
+    "WinSettings.btnSave": "Сохранить"
+}
