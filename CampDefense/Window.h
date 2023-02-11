@@ -128,28 +128,28 @@ private:
 		bool isPointed(int x, int y);
 
 		std::string item_name = "";
-		SDL_Rect item_rect{ 0, 0, 0, 0 };
+		SDL_Rect item_rect{ 0 };
 		SDL_Texture* text_texture = nullptr;
-		SDL_Rect text_rect{ 0, 0, 0, 0 };
+		SDL_Rect text_rect{ 0 };
 	};
 	SDL_Renderer* ren;
-	SDL_Rect list_rect{ 0, 0, 0, 0 };
-	SDL_Rect item_rect{ 0, 0, 0, 0 };
-	SDL_Color bg_list_color{ 0, 0, 0, 0 };
-	SDL_Color bg_item_color{ 0, 0, 0, 0 };
-	SDL_Color selected_item_color{ 0, 0, 0, 0 };
-	SDL_Color text_color{ 0, 0, 0, 0 };
+	SDL_Rect list_rect{ 0 };
+	SDL_Rect item_rect{ 0 };
+	SDL_Color bg_list_color{ 0 };
+	SDL_Color bg_item_color{ 0 };
+	SDL_Color selected_item_color{ 0 };
+	SDL_Color text_color{ 0 };
 
-	SDL_Color scroll_bar_color_full{ 0, 0, 0, 0 };
-	SDL_Rect scroll_bar_rect_full{ 0, 0, 0, 0 };
+	SDL_Color scroll_bar_color_full{ 0 };
+	SDL_Rect scroll_bar_rect_full{ 0 };
 
-	SDL_Color scroll_bar_color_current{ 0, 0, 0, 0 };
-	SDL_Rect scroll_bar_rect_current{ 0, 0, 0, 0 };
+	SDL_Color scroll_bar_color_current{ 0 };
+	SDL_Rect scroll_bar_rect_current{ 0 };
 	float scale = 0;
 	TTF_Font* font = nullptr;
 	int total_height = 0;
 	bool is_scroll_bar_pointed = false;
-	SDL_Point scroll_bar_click = { 0, 0 };
+	SDL_Point scroll_bar_click = { 0 };
 	bool visible = true;
 };
 
@@ -169,10 +169,10 @@ protected:
 	std::string text = "";
 	int x = 0;
 	int y = 0;
-	SDL_Color text_color = { 0, 0, 0, 0 };
-	SDL_Color bg_color = { 0, 0, 0, 0 };
+	SDL_Color text_color = { 0 };
+	SDL_Color bg_color = { 0 };
 	SDL_Texture* text_texture = nullptr;
-	SDL_Rect text_dstrect = { 0, 0, 0, 0 };
+	SDL_Rect text_dstrect = { 0 };
 };
 
 class TextOutputSingleLine : public TextOutput
@@ -314,6 +314,7 @@ public:
 
 private:
 	std::vector<std::unique_ptr<Button>> buttons;
+	std::vector<std::unique_ptr<TextOutput>> static_text;
 
 	std::unique_ptr<List> lang_list = nullptr;
 	std::unique_ptr<Image_Button> btnLang = nullptr;

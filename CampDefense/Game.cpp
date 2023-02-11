@@ -57,8 +57,8 @@ void Game::loop()
 
         if (windows.size() > 0)
         {
-            for (int win = 0; win < windows.size(); win++)
-                windows.at(win)->render(); // render all windows
+            for (auto& win : windows)
+                win->render(); // render all windows
             SDL_RenderPresent(ren);
         }
         else

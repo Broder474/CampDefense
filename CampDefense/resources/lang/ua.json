@@ -18,5 +18,6 @@
     "WinSaveGame.btnSaveGame": "Зберегти",
     "WinSaveGame.btnDeleteGame": "Видалити",
 
-    "WinSettings.btnSave": "Зберегти"
+    "WinSettings.btnSave": "Зберегти",
+    "WinSettings.textLang": "Мова"
 }

@@ -35,7 +35,7 @@ void Button::generateTexture()
 	SDL_FreeSurface(surface);
 
 	// remember size of text texture
-	SDL_Point tex_size = { 0, 0 };
+	SDL_Point tex_size = { 0 };
 	SDL_QueryTexture(text_texture, nullptr, nullptr, &tex_size.x, &tex_size.y);
 	text_rect = {dstrect.x + (dstrect.w - tex_size.x) / 2, dstrect.y + (dstrect.h - tex_size.y) / 2, tex_size.x, tex_size.y};
 };
@@ -452,6 +452,7 @@ void WinMainMenu::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -465,9 +466,9 @@ void WinMainMenu::handleEvents()
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
-			for (int btn = 0; btn < buttons.size(); btn++)
-				if (buttons[btn]->isPointed({ event.button.x, event.button.y }))
-					buttons[btn]->onClick(); 
+			for (auto& btn : buttons)
+				if (btn->isPointed(point_click))
+					btn->onClick(); 
 			break;
 		}
 		break;
@@ -483,8 +484,8 @@ void WinMainMenu::render()
 	SDL_RenderClear(ren);
 
 
-	for (int btn = 0; btn < buttons.size(); btn++)
-		buttons[btn]->render();
+	for (auto& btn : buttons)
+		btn->render();
 };
 
 void WinMainMenu::BtnNewGame()
@@ -551,8 +552,8 @@ void WinGame::render()
 	SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
 	SDL_RenderClear(ren);
 
-	for (int i = 0; i < images.size(); i++)
-		images.at(i)->render();
+	for (auto& image : images)
+		image->render();
 }
 
 // class WinGameMenu
@@ -578,6 +579,7 @@ void WinGameMenu::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -589,9 +591,9 @@ void WinGameMenu::handleEvents()
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
-			for (int btn = 0; btn < buttons.size(); btn++)
-				if (buttons[btn]->isPointed({ event.button.x, event.button.y }))
-					buttons[btn]->onClick();
+			for (auto& btn : buttons)
+				if (btn->isPointed(point_click))
+					btn->onClick();
 			break;
 		}
 		break;
@@ -608,11 +610,11 @@ void WinGameMenu::handleEvents()
 
 void WinGameMenu::render()
 {
-	for (int i = 0; i < images.size(); i++)
-		images.at(i)->render();
+	for (auto& image : images)
+		image->render();
 
-	for (int i = 0; i < buttons.size(); i++)
-		buttons.at(i)->render();
+	for (auto& btn : buttons)
+		btn->render();
 }
 
 void WinGameMenu::BtnSaveGame()
@@ -656,6 +658,7 @@ void WinSaveGame::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -669,9 +672,9 @@ void WinSaveGame::handleEvents()
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
-			for (int btn = 0; btn < buttons.size(); btn++)
-				if (buttons[btn]->isPointed({ event.button.x, event.button.y }))
-					buttons[btn]->onClick();
+			for (auto& btn : buttons)
+				if (btn->isPointed(point_click))
+					btn->onClick();
 			break;
 		}
 		break;
@@ -688,10 +691,10 @@ void WinSaveGame::handleEvents()
 
 void WinSaveGame::render() 
 {
-	for (int i = 0; i < images.size(); i++)
-		images.at(i)->render();
-	for (int i = 0; i < buttons.size(); i++)
-		buttons.at(i)->render();
+	for (auto& image : images)
+		image->render();
+	for (auto& btn : buttons)
+		btn->render();
 };
 
 void WinSaveGame::BtnSaveGame() {};
@@ -722,6 +725,7 @@ void WinLoadGame::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -735,12 +739,12 @@ void WinLoadGame::handleEvents()
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
-			saves_list->setScrollBarPointed({ event.button.x, event.button.y });
-			saves_list->getClickedItem({ event.button.x, event.button.y });
+			saves_list->setScrollBarPointed(point_click);
+			saves_list->getClickedItem(point_click);
 
-			for (int btn = 0; btn < buttons.size(); btn++)
-				if (buttons[btn]->isPointed({ event.button.x, event.button.y }))
-					buttons[btn]->onClick();
+			for (auto& btn : buttons)
+				if (btn->isPointed(point_click))
+					btn->onClick();
 			break;
 		}
 		break;
@@ -762,7 +766,7 @@ void WinLoadGame::handleEvents()
 		case SDL_BUTTON_LEFT:
 			if (saves_list->getVisibility())
 				if (saves_list->getScrollBarPointed())
-					saves_list->scrollBarMove({event.button.x, event.button.y});
+					saves_list->scrollBarMove(point_click);
 		}
 	}
 	case SDL_KEYDOWN:
@@ -783,8 +787,8 @@ void WinLoadGame::render()
 	SDL_RenderClear(ren);
 
 	saves_list->render();
-	for (int i = 0; i < buttons.size(); i++)
-		buttons.at(i)->render();
+	for (auto& btn : buttons)
+		btn->render();
 };
 
 void WinLoadGame::BtnLoadGame() {};
@@ -832,6 +836,7 @@ void WinDelSave::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -845,9 +850,9 @@ void WinDelSave::handleEvents()
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
-			for (int btn = 0; btn < buttons.size(); btn++)
-				if (buttons[btn]->isPointed({ event.button.x, event.button.y }))
-					buttons[btn]->onClick();
+			for (auto& btn : buttons)
+				if (btn->isPointed(point_click))
+					btn->onClick();
 			break;
 		}
 		break;
@@ -857,11 +862,11 @@ void WinDelSave::handleEvents()
 
 void WinDelSave::render()
 {
-	for (int text = 0; text < static_text.size(); text++)
-		static_text[text]->render();
+	for (auto& text : static_text)
+		text->render();
 
-	for (int btn = 0; btn < buttons.size(); btn++)
-		buttons[btn]->render();
+	for (auto& btn : buttons)
+		btn->render();
 };
 
 void WinDelSave::BtnDelete()
@@ -889,13 +894,17 @@ WinSettings::WinSettings(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	List* lang_list = new List(ren, { 200, 160, 300, 300 }, { 0, 0, 300, 60 }, { 200, 128, 128, 0 }, { 170, 128, 128, 0 }, { 170, 170, 128, 0 },
 		{ 90, 90, 140, 0 }, settings->getScale(), res->fonts["calibri32"], 20);
 	this->lang_list.reset(lang_list);
-	for (auto lang = res->lang_list.begin(); lang != res->lang_list.end(); lang++)
-		lang_list->addItem(lang->second);
+	for (auto& lang : res->lang_list)
+		lang_list->addItem(lang.second);
 	lang_list->setVisibility(false);
 
 	Image_Button* btnLang(new Image_Button(ren, { 200, 100, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"], res->lang_list[settings->getLang()],
 		settings->getScale(), this, &WinSettings::BtnLang, res->gui_textures["button2"].texture));
 	this->btnLang.reset(btnLang);
+
+	std::unique_ptr<TextOutputSingleLine>textLang(new TextOutputSingleLine(ren, res->fonts["calibri32"], res->lang["WinSettings.textLang"],
+		settings->getScale(), 200, 60, { 90, 90, 140, 0 }));
+	static_text.push_back(std::move(textLang));
 }
 
 WinSettings::~WinSettings() {};
@@ -904,6 +913,8 @@ void WinSettings::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -917,16 +928,16 @@ void WinSettings::handleEvents()
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
-			lang_list->setScrollBarPointed({ event.button.x, event.button.y });
-			std::string selected_lang = lang_list->getClickedItem({ event.button.x, event.button.y });
+			lang_list->setScrollBarPointed(point_click);
+			std::string selected_lang = lang_list->getClickedItem(point_click);
 			if (selected_lang != "")
 				btnLang->setText(selected_lang);
-			if (btnLang->isPointed({ event.button.x, event.button.y }))
+			if (btnLang->isPointed(point_click))
 				btnLang->onClick();
 
-			for (int btn = 0; btn < buttons.size(); btn++)
-				if (buttons[btn]->isPointed({ event.button.x, event.button.y }))
-					buttons[btn]->onClick();
+			for (auto& btn : buttons)
+				if (btn->isPointed(point_click))
+					btn->onClick();
 			break;
 		}
 		break;
@@ -951,30 +962,32 @@ void WinSettings::render()
 	lang_list->render();
 	btnLang->render();
 
-	for (int btn = 0; btn < buttons.size(); btn++)
-		buttons[btn]->render();
+	for (auto& btn : buttons)
+		btn->render();
+
+	for (auto& text : static_text)
+		text->render();
 }
 
 void WinSettings::BtnSave()
 {
 	std::string full_lang = btnLang->getText();
-	std::string short_lang = "";
-	for (auto it = resources->lang_list.begin(); it != resources->lang_list.end(); it++)
-		if (full_lang == it->second)
+	for (auto& it : resources->lang_list)
+		if (full_lang == it.second)
 		{
-			settings->setLang(it->first);
+			settings->setLang(it.first);
 			break;
 		}
-
+	
 	// settings saving
-	std::ofstream out_settings("settings.json", std::ios::trunc);
-	out_settings << settings->convert_to_json();
-	out_settings.close();
-
 	extern Game* game;
+	json settings = this->settings->convert_to_json();
+	game->saveSettings(&settings);
+
+	// resources loading
 	game->loadResources();
 
-	std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, game->resources, settings));
+	std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, game->resources, this->settings));
 	windows.clear();
 	windows.push_back(std::move(winMainMenu));
 }

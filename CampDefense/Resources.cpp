@@ -34,15 +34,13 @@ Resources::Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_
 			in_lang_list.open(lang_list_file);
 			json lang_list = json::parse(in_lang_list);
 			in_lang_list.close();
-			for (int i = 0; i < lang_list["langs"].size(); i++)
-			{
-				if (lang_list["langs"][i].is_string())
+			for (auto& it : lang_list["langs"])
+				if (it.is_string())
 				{
-					std::string lang_short = lang_list["langs"][i];
+					std::string lang_short = it;
 					if (lang_list[lang_short].is_string())
 						lang_list[lang_short].get_to(this->lang_list[lang_short]);
 				}
-			}
 		}
 
 	// read json for weapons
@@ -53,9 +51,9 @@ Resources::Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_
 		in_weapons.close();
 	}
 	// loading weapons textures
-	for (int i = 0; i < weapons_data["samples"].size(); i++)
+	for (auto& it : weapons_data["samples"])
 	{
-		std::string weapon = weapons_data["samples"][i];
+		std::string weapon = it;
 		std::string file_tex_simple = weapons_data[weapon]["texture_simple"];
 		SDL_Texture* texture_simple = CreateTextureFromFile(ren, file_tex_simple.c_str());
 		std::string name_tex_simple = weapon + " S";
@@ -81,9 +79,9 @@ Resources::Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_
 		in_gui.close();
 	}
 	// loading gui textures
-	for (int i = 0; i < gui_data["samples"].size(); i++)
+	for (auto& it : gui_data["samples"])
 	{
-		std::string gui_object = gui_data["samples"][i];
+		std::string gui_object = it;
 		std::string file_gui_object = gui_data[gui_object];
 		SDL_Texture* texture_object = CreateTextureFromFile(ren, file_gui_object.c_str());
 		gui_textures[gui_object].texture = texture_object;
@@ -91,5 +89,4 @@ Resources::Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_
 		gui_textures[gui_object].dstrect.w /= settings->getScale();
 		gui_textures[gui_object].dstrect.h /= settings->getScale();
 	}
-
 }

@@ -14,7 +14,7 @@ struct TextureData
 {
 	~TextureData() {SDL_DestroyTexture(texture); }
 	SDL_Texture* texture = nullptr;
-	SDL_Rect dstrect = { 0, 0, 0, 0 };
+	SDL_Rect dstrect = { 0 };
 };
 
 class Resources

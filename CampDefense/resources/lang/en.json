@@ -18,5 +18,6 @@
     "WinSaveGame.btnSaveGame": "Save",
     "WinSaveGame.btnDeleteGame": "Delete",
 
-    "WinSettings.btnSave": "Save"
+    "WinSettings.btnSave": "Save",
+    "WinSettings.textLang": "Language"
 }
