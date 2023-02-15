@@ -2,7 +2,7 @@
 #include "Functions.h"
 #include "Resources.h"
 
-Resources::Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_file, const char* gui_file, const char* lang_file) : ren(ren), display(display)
+Resources::Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_file, const char* gui_file, const char* lang_file) : ren(ren)
 {
 	// fonts loading
 	TTF_Font* calibri24(TTF_OpenFont("resources/fonts/calibri.ttf", 24 / settings->getScale()));

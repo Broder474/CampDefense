@@ -48,5 +48,4 @@ public:
 private:
 
 	SDL_Renderer* ren;
-	SDL_Point* display;
 };

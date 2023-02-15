@@ -1,10 +1,12 @@
 ﻿#include "Game.h"
 #include <fstream>
 
+extern Game* game;
+
 // Button class
 template<class O, class M>
 Button::Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, O* object, M method):
-	ren(ren), dstrect(dstrect), text_color(text_color), onClick(onClick), font(font), text(text), scale(scale)
+	ren(ren), dstrect(dstrect), text_color(text_color), font(font), text(text), scale(scale)
 {
 	this->dstrect.x /= scale;
 	this->dstrect.y /= scale;
@@ -14,6 +16,16 @@ Button::Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Fo
 	setOnClick(object, method);
 }
 
+Button::Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, CallBack onClick):
+	ren(ren), dstrect(dstrect), text_color(text_color), font(font), text(text), scale(scale), onClick(onClick)
+{
+	this->dstrect.x /= scale;
+	this->dstrect.y /= scale;
+	this->dstrect.w /= scale;
+	this->dstrect.h /= scale;
+	generateTexture();
+}
+
 void Button::render()
 {
 	SDL_RenderCopy(ren, text_texture, 0, &text_rect); // render only text
@@ -21,6 +33,8 @@ void Button::render()
 
 bool Button::isPointed(SDL_Point point)
 {
+	if (getVisibility() == false)
+		return false;
 	if (point.x > this->dstrect.x && point.x < this->dstrect.x + dstrect.w && point.y > this->dstrect.y && point.y < this->dstrect.y + dstrect.h)
 		return true;
 	return false;
@@ -54,6 +68,8 @@ Image_Button::~Image_Button() {};
 
 void Image_Button::render() 
 {
+	if (getVisibility() == false)
+		return;
 	SDL_RenderCopy(ren, bg_texture, nullptr, &dstrect);
 	Button::render();
 };
@@ -63,6 +79,8 @@ Color_Button::~Color_Button() {};
 
 void Color_Button::render() 
 {
+	if (getVisibility() == false)
+		return;
 	SDL_SetRenderDrawColor(ren, bg_color.r, bg_color.g, bg_color.b, bg_color.a);
 	SDL_RenderFillRect(ren, &dstrect);
 
@@ -80,6 +98,8 @@ Image::Image(SDL_Renderer* ren, SDL_Texture* texture, SDL_Rect dstrect, float sc
 
 void Image::render()
 {
+	if (getVisibility() == false)
+		return;
 	SDL_RenderCopy(ren, texture, nullptr, &dstrect);
 }
 
@@ -386,6 +406,8 @@ void TextOutputSingleLine::generateTexture(int type)
 
 void TextOutputSingleLine::render()
 {
+	if (getVisibility() == false)
+		return;
 	SDL_RenderCopy(ren, text_texture, nullptr, &text_dstrect);
 }
 
@@ -425,6 +447,8 @@ void TextOutputMultiLine::generateTexture(int type)
 
 void TextOutputMultiLine::render()
 {
+	if (getVisibility() == false)
+		return;
 	SDL_RenderCopy(ren, text_texture, nullptr, &text_dstrect);
 }
 
@@ -433,16 +457,29 @@ WinMainMenu::WinMainMenu(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	Window(ren, windows, res, settings)
 {
 	std::unique_ptr<Image_Button> btnNewGame(new Image_Button(ren, { 810, 470, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinMainMenu.btnNewGame"], settings->getScale(), this, & WinMainMenu::BtnNewGame, res->gui_textures["button1"].texture));
+		res->lang["WinMainMenu.btnNewGame"], settings->getScale(), [&]() {
+			std::unique_ptr<WinGame>winGame(new WinGame(this->ren, this->windows, this->resources, this->settings));
+			this->windows.clear();
+			this->windows.push_back(std::move(winGame));
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnNewGame));
+
 	std::unique_ptr<Image_Button> btnLoadGame(new Image_Button(ren, { 810, 540, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinMainMenu.btnLoadGame"], settings->getScale(), this, & WinMainMenu::BtnLoadGame, res->gui_textures["button1"].texture));
+		res->lang["WinMainMenu.btnLoadGame"], settings->getScale(), [&]() {
+			std::unique_ptr<WinLoadGame>winLoadGame(new WinLoadGame(this->ren, this->windows, this->resources, this->settings));
+			this->windows.push_back(std::move(winLoadGame));
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnLoadGame));
+
 	std::unique_ptr<Image_Button> btnSettings(new Image_Button(ren, { 810, 610, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinMainMenu.btnSettings"], settings->getScale(), this, & WinMainMenu::BtnSettings, res->gui_textures["button1"].texture));
+		res->lang["WinMainMenu.btnSettings"], settings->getScale(), [&]() {	
+			std::unique_ptr<WinSettings>winSettings(new WinSettings(this->ren, this->windows, this->resources, this->settings));
+			this->windows.push_back(std::move(winSettings));
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnSettings));
+
 	std::unique_ptr<Image_Button> btnExit(new Image_Button(ren, { 810, 680, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinMainMenu.btnExit"], settings->getScale(), this, & WinMainMenu::BtnExit, res->gui_textures["button1"].texture));
+		res->lang["WinMainMenu.btnExit"], settings->getScale(), [&]() {windows.clear(); }, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnExit));
 };
 
@@ -483,43 +520,65 @@ void WinMainMenu::render()
 	SDL_SetRenderDrawColor(ren, 40, 30, 70, 255);
 	SDL_RenderClear(ren);
 
-
 	for (auto& btn : buttons)
 		btn->render();
 };
 
-void WinMainMenu::BtnNewGame()
-{
-	std::unique_ptr<WinGame>winGame(new WinGame(ren, windows, resources, settings));
-	windows.clear();
-	windows.push_back(std::move(winGame));
-}
-
-void WinMainMenu::BtnLoadGame()
-{
-	std::unique_ptr<WinLoadGame>winLoadGame(new WinLoadGame(ren, windows, resources, settings));
-	windows.clear();
-	windows.push_back(std::move(winLoadGame));
-}
-
-void WinMainMenu::BtnSettings()
-{
-	std::unique_ptr<WinSettings>winSettings(new WinSettings(ren, windows, resources, settings));
-	windows.clear();
-	windows.push_back(std::move(winSettings));
-}
-
-void WinMainMenu::BtnExit()
-{
-	windows.clear();
-}
-
 // WinGame class
 WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings) : 
-	Window(ren, windows, res, settings) 
+	Window(ren, windows, res, settings)
 {
+	world = new World(0, 6);
+	game->world = this->world;
+	for (int i = 0; i < 1 + rand() % 3; i++)
+	{
+		int gender = rand() % 2;
+		unsigned int health = 50 + rand() % 11 * 10;
+		if (gender == Character::Male)
+			health += 10;
+		float speed_per_tact = 0.8f + (float)(rand() % 41) / 100; // min - 0.8f, max - 1.2f
+		unsigned int strength = 5; // minimum melee attack
+		unsigned int chance = rand() % 101;
+		if (chance > 90)
+			strength += rand() % 41;
+		else if (chance > 66)
+			strength += rand() % 31;
+		else if (chance > 33)
+			strength += rand() % 21;
+		else
+			strength += rand() % 16;
+		unsigned int consumption = 5 + (health - 50) * 0.05f; // min - 5, max - 10
+		std::unique_ptr<Character> character(new Character(gender, health, speed_per_tact, strength, res, nullptr,
+			consumption, (unsigned int)0, (unsigned int)0, (unsigned int)0, (unsigned int)0));
+		world->entities.push_back(std::move(character));
+	}
+
+	// gui initialization
 	std::unique_ptr<Image>bg_image(new Image(ren, res->gui_textures["background2"].texture, res->gui_textures["background2"].dstrect, 1.0f));
 	images.push_back(std::move(bg_image));
+
+	std::string day = res->lang["WinGame.day"];
+	day += " " + std::to_string(world->getDay());
+	TextOutputSingleLine* text_day = new TextOutputSingleLine(ren, res->fonts["calibri32"], day, settings->getScale(), 5, 5, { 60, 60, 200, 0 });
+	texts["day"].reset(text_day);
+
+	std::string hour = std::to_string(world->getHour()) + ":00";
+	TextOutputSingleLine* text_hour = new TextOutputSingleLine(ren, res->fonts["calibri32"], hour, settings->getScale(), 5, 45, { 60, 60, 200, 0 });
+	texts["hour"].reset(text_hour);
+
+	std::string materials = res->lang["WinGame.materials"];
+	materials += ": " + std::to_string(world->getMaterials());
+	TextOutputSingleLine* text_materials = new TextOutputSingleLine(ren, res->fonts["calibri32"], materials, settings->getScale(), 5, 85, { 60, 60, 200, 0 });
+	texts["materials"].reset(text_materials);
+
+	std::string products = res->lang["WinGame.products"];
+	products += ": " + std::to_string(world->getProducts());
+	TextOutputSingleLine* text_products = new TextOutputSingleLine(ren, res->fonts["calibri32"], products, settings->getScale(), 5, 125, { 60, 60, 200, 0 });
+	texts["products"].reset(text_products);
+	
+	Image_Button* btnActions(new Image_Button(ren, { 0, 1020, 300, 60 }, { 60, 60, 200, 0 }, res->fonts["calibri32"],
+		res->lang["WinGame.btnActions"], settings->getScale(), this, &WinGame::BtnActions, res->gui_textures["button1"].texture));
+	buttons["Actions"].reset(btnActions);
 };
 
 WinGame::~WinGame() {};
@@ -528,6 +587,7 @@ void WinGame::handleEvents()
 {
 	SDL_Event event;
 	SDL_PollEvent(&event);
+	SDL_Point point_click{ event.button.x, event.button.y };
 
 	switch (event.type)
 	{
@@ -544,6 +604,54 @@ void WinGame::handleEvents()
 			break;
 		}
 	}
+	case SDL_MOUSEBUTTONDOWN:
+	{
+		switch (event.button.button)
+		{
+		case SDL_BUTTON_LEFT:
+			for (auto& btn : buttons)
+				if (btn.second->isPointed(point_click))
+					btn.second->onClick();
+			break;
+		}
+		break;
+	}
+	}
+	if (SDL_GetTicks64() >= update_timer && update_status == true)
+		update();
+}
+
+void WinGame::update()
+{
+	update_timer = SDL_GetTicks64() + 50;
+	world->update();
+
+	std::string hour = std::to_string(world->getHour()) + ":00";
+	if (texts["hour"]->getText() != hour)
+	{
+		texts["hour"]->setText(hour);
+		texts["hour"]->generateTexture(0);
+	}
+	std::string day = resources->lang["WinGame.day"];
+	day += " " + std::to_string(world->getDay());
+	if (texts["day"]->getText() != day)
+	{
+		texts["day"]->setText(day);
+		texts["day"]->generateTexture(0);
+	}
+	std::string materials = resources->lang["WinGame.materials"];
+	materials += ": " + std::to_string(world->getMaterials());
+	if (texts["materials"]->getText() != materials)
+	{
+		texts["materials"]->setText(materials);
+		texts["materials"]->generateTexture(0);
+	}
+	std::string products = resources->lang["WinGame.products"];
+	products += ": " + std::to_string(world->getProducts());
+	if (texts["products"]->getText() != products)
+	{
+		texts["products"]->setText(products);
+		texts["products"]->generateTexture(0);
 	}
 }
 
@@ -554,6 +662,17 @@ void WinGame::render()
 
 	for (auto& image : images)
 		image->render();
+
+	for (auto& btn : buttons)
+		btn.second->render();
+
+	for (auto& text : texts)
+		text.second->render();
+}
+
+void WinGame::BtnActions()
+{
+	
 }
 
 // class WinGameMenu
@@ -561,14 +680,27 @@ WinGameMenu::WinGameMenu(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	Window(ren, windows, res, settings)
 {
 	std::unique_ptr<Image_Button>btnSaveGame(new Image_Button(ren, { 810, 420, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinGameMenu.btnSaveGame"], settings->getScale(), this, & WinGameMenu::BtnSaveGame, res->gui_textures["button1"].texture));
+		res->lang["WinGameMenu.btnSaveGame"], settings->getScale(), [&]() {
+			std::unique_ptr<WinSaveGame>winSaveGame(new WinSaveGame(this->ren, this->windows, this->resources, this->settings));
+			this->windows.push_back(std::move(winSaveGame));
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnSaveGame));
+
 	std::unique_ptr<Image_Button>btnLoadGame(new Image_Button(ren, { 810, 500, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinGameMenu.btnLoadGame"], settings->getScale(), this, &WinGameMenu::BtnLoadGame, res->gui_textures["button1"].texture));
+		res->lang["WinGameMenu.btnLoadGame"], settings->getScale(), [&]() {
+			std::unique_ptr<WinLoadGame>winLoadGame(new WinLoadGame(this->ren, this->windows, this->resources, this->settings));
+			this->windows.push_back(std::move(winLoadGame));
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnLoadGame));
+
 	std::unique_ptr<Image_Button>btnMainMenu(new Image_Button(ren, { 810, 580, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinGameMenu.btnMainMenu"], settings->getScale(), this, &WinGameMenu::BtnMainMenu, res->gui_textures["button1"].texture));
+		res->lang["WinGameMenu.btnMainMenu"], settings->getScale(), [&]() {
+			std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(this->ren, this->windows, this->resources, this->settings));
+			this->windows.clear();
+			this->windows.push_back(std::move(winMainMenu));
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnMainMenu));
+
 	std::unique_ptr<Image>bg_image(new Image(ren, res->gui_textures["background1"].texture, { 260, 140, 1400, 800 }, settings->getScale()));
 	images.push_back(std::move(bg_image));
 }
@@ -617,26 +749,6 @@ void WinGameMenu::render()
 		btn->render();
 }
 
-void WinGameMenu::BtnSaveGame()
-{
-	std::unique_ptr<WinSaveGame>winSaveGame(new WinSaveGame(ren, windows, resources, settings));
-	windows.pop_back();
-	windows.push_back(std::move(winSaveGame));
-}
-
-void WinGameMenu::BtnLoadGame()
-{
-	std::unique_ptr<WinLoadGame>winLoadGame(new WinLoadGame(ren, windows, resources, settings));
-	windows.pop_back();
-	windows.push_back(std::move(winLoadGame));
-}
-void WinGameMenu::BtnMainMenu()
-{
-	std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, resources, settings));
-	windows.clear();
-	windows.push_back(std::move(winMainMenu));
-}
-
 // class WinSaveGame
 WinSaveGame::WinSaveGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings):
 	Window(ren, windows, res, settings)
@@ -644,6 +756,7 @@ WinSaveGame::WinSaveGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	std::unique_ptr<Image_Button>btnSaveGame(new Image_Button(ren, { 605, 820, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinSaveGame.btnSaveGame"], settings->getScale(), this, & WinSaveGame::BtnSaveGame, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnSaveGame));
+
 	std::unique_ptr<Image_Button>btnDeleteGame(new Image_Button(ren, { 1115, 820, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinSaveGame.btnDeleteGame"], settings->getScale(), this, & WinSaveGame::BtnDeleteSave, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnDeleteGame));
@@ -708,6 +821,7 @@ WinLoadGame::WinLoadGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	std::unique_ptr<Image_Button>btnLoadGame(new Image_Button(ren, { 560, 900, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinLoadGame.btnLoadGame"], settings->getScale(), this, &WinLoadGame::BtnLoadGame, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnLoadGame));
+
 	std::unique_ptr<Image_Button>btnDeleteGame(new Image_Button(ren, { 1060, 900, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinLoadGame.btnDeleteGame"], settings->getScale(), this, &WinLoadGame::BtnDeleteSave, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnDeleteGame));
@@ -773,9 +887,7 @@ void WinLoadGame::handleEvents()
 		switch (event.key.keysym.sym)
 		{
 		case SDLK_ESCAPE:
-			std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, resources, settings));
-			windows.clear();
-			windows.push_back(std::move(winMainMenu));
+			windows.pop_back();
 			break;
 		}
 	}
@@ -795,8 +907,7 @@ void WinLoadGame::BtnLoadGame() {};
 
 void WinLoadGame::LoadSaves()
 {
-	fs::path saves_dir = fs::current_path();
-	saves_dir += "/saves";
+	fs::path saves_dir = fs::current_path().string() + "/saves";
 	if (!fs::exists(saves_dir))
 		fs::create_directory(saves_dir);
 	for (auto save_path : fs::directory_iterator(saves_dir))
@@ -821,8 +932,11 @@ WinDelSave::WinDelSave(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& 
 	std::unique_ptr<Image_Button>btnDelete(new Image_Button(ren, { 560, 900, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinDelSave.btnDelete"], settings->getScale(), this, &WinDelSave::BtnDelete, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnDelete));
+
 	std::unique_ptr<Image_Button>btnCancel(new Image_Button(ren, { 1060, 900, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
-		res->lang["WinDelSave.btnCancel"], settings->getScale(), this, &WinDelSave::BtnCancel, res->gui_textures["button1"].texture));
+		res->lang["WinDelSave.btnCancel"], settings->getScale(), [&]() {
+			this->windows.pop_back();
+		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnCancel));
 
 	std::unique_ptr<TextOutputMultiLine>textAreYouSure(new TextOutputMultiLine(ren, res->fonts["calibri32"],
@@ -877,13 +991,7 @@ void WinDelSave::BtnDelete()
 	windows.pop_back();
 }
 
-void WinDelSave::BtnCancel()
-{
-	windows.pop_back();
-}
-
 // class WinSettings
-
 WinSettings::WinSettings(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings) :
 	Window(ren, windows, res, settings)
 {
@@ -899,7 +1007,9 @@ WinSettings::WinSettings(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	lang_list->setVisibility(false);
 
 	Image_Button* btnLang(new Image_Button(ren, { 200, 100, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"], res->lang_list[settings->getLang()],
-		settings->getScale(), this, &WinSettings::BtnLang, res->gui_textures["button2"].texture));
+		settings->getScale(), [&]() {
+			this->lang_list->setVisibility(!this->lang_list->getVisibility());
+		}, res->gui_textures["button2"].texture));
 	this->btnLang.reset(btnLang);
 
 	std::unique_ptr<TextOutputSingleLine>textLang(new TextOutputSingleLine(ren, res->fonts["calibri32"], res->lang["WinSettings.textLang"],
@@ -946,9 +1056,7 @@ void WinSettings::handleEvents()
 		switch (event.key.keysym.sym)
 		{
 		case SDLK_ESCAPE:
-			std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, resources, settings));
-			windows.clear();
-			windows.push_back(std::move(winMainMenu));
+			windows.pop_back();
 			break;
 		}
 	}
@@ -980,7 +1088,6 @@ void WinSettings::BtnSave()
 		}
 	
 	// settings saving
-	extern Game* game;
 	json settings = this->settings->convert_to_json();
 	game->saveSettings(&settings);
 
@@ -990,9 +1097,4 @@ void WinSettings::BtnSave()
 	std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, game->resources, this->settings));
 	windows.clear();
 	windows.push_back(std::move(winMainMenu));
-}
-
-void WinSettings::BtnLang()
-{
-	lang_list->setVisibility(!lang_list->getVisibility());
 }

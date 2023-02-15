@@ -6,6 +6,7 @@ Game::Game()
     win = SDL_CreateWindow("Camp Defense", 0, 0, 1920, 1080, SDL_WINDOW_FULLSCREEN_DESKTOP);
     ren = SDL_CreateRenderer(win, -1, 0);
     setStatus(true);
+    srand(time(0));
 
     json settings;
     std::ifstream in_settings("settings.json");
@@ -51,7 +52,7 @@ void Game::loop()
 {
     while (getStatus())
     {
-        SDL_Delay(16); // 60 tacts per second
+        SDL_Delay(10); // 100 tacts per second for window
 
         windows.back()->handleEvents(); // handle events from top window
 

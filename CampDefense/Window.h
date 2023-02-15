@@ -9,16 +9,17 @@
 #include <filesystem>
 #include "Functions.h"
 #include "World.h"
-#include "Resources.h"
 
 namespace fs = std::filesystem;
 
 class Button
 {
-	using CallBack = std::function<void()>;
 public:
+	using CallBack = std::function<void()>;
 	template<class O, class M>
-	Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, O* object, M method);
+	Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, O* object, M method); // onClick is a method of class
+	Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, CallBack onClick);
+
 	virtual	~Button()
 	{
 		SDL_DestroyTexture(text_texture);
@@ -32,17 +33,20 @@ public:
 	void setOnClick(O* object, M method) { onClick = std::bind(method, object); }
 	void setText(std::string text);
 	std::string getText() { return text; }
+	bool getVisibility() { return visibility; };
+	void setVisibility(bool visibility) { this->visibility = visibility; }
 
 	CallBack onClick;
 protected:
-	SDL_Renderer* ren;
-	SDL_Rect dstrect;
-	std::string text;
-	TTF_Font* font;
-	SDL_Rect text_rect;
-	SDL_Color text_color;
-	SDL_Texture* text_texture;
-	float scale;
+	SDL_Renderer* ren = nullptr;
+	SDL_Rect dstrect = { 0 };
+	std::string text = "";
+	TTF_Font* font = nullptr;
+	SDL_Rect text_rect = { 0 };
+	SDL_Color text_color = { 0 };
+	SDL_Texture* text_texture = nullptr;
+	float scale = 0.0f;
+	bool visibility = true;
 };
 
 class Image_Button : public Button
@@ -51,10 +55,12 @@ public:
 	template<class O, class M>
 	Image_Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, O* object, M method, SDL_Texture* bg_texture) :
 		Button(ren, dstrect, text_color, font, text, scale, object, method), bg_texture(bg_texture) {};
+	Image_Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, CallBack onClick, SDL_Texture* bg_texture) :
+		Button(ren, dstrect, text_color, font, text, scale, onClick), bg_texture(bg_texture) {};
 	~Image_Button() override;
 	void render() override;
 private:
-	SDL_Texture* bg_texture;
+	SDL_Texture* bg_texture = nullptr;
 };
 
 class Color_Button : public Button
@@ -63,10 +69,12 @@ public:
 	template<class O, class M>
 	Color_Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, O* object, M method, SDL_Color bg_color) :
 		Button(ren, dstrect, text_color, font, text, scale, object, method), bg_color(bg_color) {};
+	Color_Button(SDL_Renderer* ren, SDL_Rect dstrect, SDL_Color text_color, TTF_Font* font, std::string text, float scale, CallBack onClick, SDL_Color bg_color) :
+		Button(ren, dstrect, text_color, font, text, scale, onClick), bg_color(bg_color) {};
 	~Color_Button() override;
 	void render() override;
 private:
-	SDL_Color bg_color;
+	SDL_Color bg_color = { 0 };
 };
 
 class Image
@@ -75,11 +83,14 @@ public:
 	Image(SDL_Renderer* ren, SDL_Texture* texture, SDL_Rect dstrect, float scale);
 	~Image() {};
 	void render();
+	bool getVisibility() { return visibility; }
+	void setVisibility(bool visibility) { this->visibility = visibility; }
 private:
-	SDL_Renderer* ren;
-	SDL_Texture* texture;
-	SDL_Rect dstrect;
-	float scale;
+	SDL_Renderer* ren = nullptr;
+	SDL_Texture* texture = nullptr;
+	SDL_Rect dstrect = { 0 };
+	float scale = 0.0f;
+	bool visibility = true;
 };
 
 class Window
@@ -94,9 +105,9 @@ public:
 
 protected:
 	std::vector<std::unique_ptr<Window>>& windows;
-	Resources* resources;
-	SDL_Renderer* ren;
-	Settings* settings;
+	Resources* resources = nullptr;
+	SDL_Renderer* ren = nullptr;
+	Settings* settings = nullptr;
 };
 
 class List
@@ -162,6 +173,10 @@ public:
 
 	virtual void render() = 0;
 	virtual void generateTexture(int type) = 0;
+	bool getVisibility() { return visibility; }
+	void setVisibility(bool visibility) { this->visibility = visibility; }
+	std::string getText() { return text; }
+	void setText(std::string text) { this->text = text; }
 protected:
 	float scale = 0;
 	SDL_Renderer* ren = nullptr;
@@ -173,6 +188,7 @@ protected:
 	SDL_Color bg_color = { 0 };
 	SDL_Texture* text_texture = nullptr;
 	SDL_Rect text_dstrect = { 0 };
+	bool visibility = true;
 };
 
 class TextOutputSingleLine : public TextOutput
@@ -211,11 +227,6 @@ public:
 
 private:
 	std::vector<std::unique_ptr<Button>> buttons;
-
-	void BtnNewGame();
-	void BtnLoadGame();
-	void BtnSettings();
-	void BtnExit();
 };
 
 class WinGame : public Window
@@ -226,8 +237,17 @@ public:
 	
 	void handleEvents() override;
 	void render() override;
+	void update();
+
+	void BtnActions();
+
+	Uint64 update_timer = 0;
+	bool update_status = true;
 private:
+	World* world = nullptr;
+	std::map<std::string, std::unique_ptr<Button>>buttons;
 	std::vector<std::unique_ptr<Image>> images;
+	std::map<std::string, std::unique_ptr<TextOutputSingleLine>> texts;
 };
 
 class WinGameMenu : public Window
@@ -241,10 +261,6 @@ public:
 private:
 	std::vector<std::unique_ptr<Button>> buttons;
 	std::vector<std::unique_ptr<Image>> images;
-
-	void BtnSaveGame();
-	void BtnLoadGame();
-	void BtnMainMenu();
 };
 
 class WinSaveGame : public Window
@@ -297,7 +313,6 @@ private:
 	std::vector<std::unique_ptr<TextOutput>> static_text;
 
 	void BtnDelete();
-	void BtnCancel();
 };
 
 class WinSettings : public Window
@@ -310,7 +325,6 @@ public:
 	void render() override;
 
 	void BtnSave();
-	void BtnLang();
 
 private:
 	std::vector<std::unique_ptr<Button>> buttons;

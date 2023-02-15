@@ -19,5 +19,24 @@
     "WinSaveGame.btnDeleteGame": "Delete",
 
     "WinSettings.btnSave": "Save",
-    "WinSettings.textLang": "Language"
+    "WinSettings.textLang": "Language",
+
+    "WinGame.day": "Day",
+    "WinGame.products": "Products",
+    "WinGame.materials": "Materials",
+    "WinGame.btnActions": "Actions",
+
+    "names":
+    {
+        "male":
+        [
+            "Bob", "Rick", "Manuel", "William", "Arnold", "Steve", "Jack", "Levi", "Jason", "Daniel", "Sebastian", "John", "Leo", "Andrew",
+            "Robert", "Connor", "James", "Henry", "Oliver", "Lucas"
+        ],
+        "female":
+        [
+            "Olivia", "Emma", "Amelia", "Sophie", "Isabella", "Anna", "Emily", "Chloe", "Nora", "Violet", "Emilia", "Maya", "Natalia",
+            "Caroline", "Eva", "Adeline", "Iris", "Maria", "Julia", "Rose"
+        ]
+    }
 }
