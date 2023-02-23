@@ -202,7 +202,7 @@ void List::removeItem(std::string item_name)
 		}
 		if (item_found == true)
 		{
-			item->get()->item_rect.y -= item_rect.h;
+			item->second->item_rect.y -= item_rect.h;
 			item->get()->text_rect.y -= item_rect.h;
 		}
 	}
