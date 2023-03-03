@@ -2,7 +2,8 @@
     "samples": 
     [
         "combat", "survival", "health", "satiety", 
-        "shot_damage", "shot_accuracy", "shot_max_distance", "shot_timeout", "burst_length", "burst_timeout", "pellet_count"
+        "shot_damage", "shot_accuracy", "shot_max_distance", "shot_timeout", "burst_length", "burst_timeout", "pellet_count",
+        "hit"
     ],
     "combat": "resources/textures/icons/combat.png",
     "survival": "resources/textures/icons/survival.png",
@@ -15,5 +16,7 @@
     "shot_timeout": "resources/textures/icons/shot_timeout.png",
     "burst_length": "resources/textures/icons/burst_length.png",
     "burst_timeout": "resources/textures/icons/burst_timeout.png",
-    "pellet_count": "resources/textures/icons/pellet_count.png"
+    "pellet_count": "resources/textures/icons/pellet_count.png",
+
+    "hit": "resources/textures/icons/hit.png"
 }

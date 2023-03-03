@@ -74,8 +74,8 @@ void Game::loop()
 
 void Game::clean()
 {
-    SDL_DestroyWindow(win);
     SDL_DestroyRenderer(ren);
+    SDL_DestroyWindow(win);
 }
 
 void Game::saveSettings(json* settings)

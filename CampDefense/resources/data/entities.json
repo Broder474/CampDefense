@@ -1,10 +1,11 @@
 {
     "characters": 
     [
-        "character1", "character2"
+        "character1", "character2", "character3"
     ],
     "character1": "resources/textures/entities/character1.png",
     "character2":  "resources/textures/entities/character2.png",
+    "character3": "resources/textures/entities/character3.png",
     "zombies": 
     [
         "zombie1"

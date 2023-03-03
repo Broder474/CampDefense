@@ -36,6 +36,7 @@ public:
 	void removeCharacter(std::string name);
 	void spawnZombies();
 	void updateZombies();
+	void updateCharacters();
 
 	struct Trigger
 	{
@@ -60,6 +61,7 @@ private:
 	int fight_end = 6;
 	int zombie_spawn_timeout; // in milliseconds
 	Uint64 zombie_spawn_timer;
+	float melee_distance = 45.0f;
 
 	int food = 0;
 	int resources = 0;
@@ -89,10 +91,18 @@ public:
 	float getAngle() { return angle; }
 	void setTarget(int id) { this->target_id = id; }
 	int getTarget() { return target_id; }
+	void hit(int damage);
+
 	int getMeleeTimeout() { return melee_timeout; }
 	Uint64 getMeleeTimer() { return melee_timer; }
 	void addMeleeTimer(int time) { melee_timer += time; }
 	void setMeleeTimer(Uint64 time) { melee_timer = time; }
+
+	Uint64 getHitTimer() { return hit_timer; }
+	void addHitTimer(Uint64 time) { hit_timer = time; }
+	SDL_Point getHitPos() { return hit_pos; }
+
+	bool is_hit = false; // needed for animation of damage receiving
 protected:
 	Resources* res = nullptr;
 	Settings* settings = nullptr;
@@ -106,6 +116,8 @@ protected:
 	int target_id = -1; // target for attack
 	int melee_timeout = 0;
 	Uint64 melee_timer = 0;
+	Uint64 hit_timer = 0;
+	SDL_Point hit_pos{ 0 };
 };
 
 class Character : public Entity
@@ -193,6 +205,11 @@ public:
 	~Zombie() override;
 
 	void addHealth(int health) override;
+
+	struct Trigger
+	{
+		bool dead = false;
+	}trigger;
 private:
 };
 

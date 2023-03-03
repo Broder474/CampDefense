@@ -51,7 +51,24 @@ void World::addHours(int hours)
 				character.trigger.satiety = true;
 				trigger.food = true;
 				if (character.getSatiety() == 0)
-					character.trigger.dead = true;
+					character.addHealth(-(int)character.getMaxHealth() / 10);
+
+				// healing if characters have not full health
+				if (character.getHealth() < character.getMaxHealth())
+				{
+					int health_flaw = character.getMaxHealth() - character.getHealth();
+					int can_be_added_health = character.getMaxHealth() / 10;
+					if (health_flaw <= can_be_added_health)
+					{
+						character.addSatiety(-health_flaw);
+						character.addHealth(health_flaw);
+					}
+					else
+					{
+						character.addSatiety(-can_be_added_health);
+						character.addHealth(can_be_added_health);
+					}
+				}
 			}
 		trigger.day = true;
 	}
@@ -86,6 +103,7 @@ void World::update()
 	ticks++;
 
 	updateZombies();
+	updateCharacters();
 
 	if (status == Fight)
 		spawnZombies();
@@ -388,7 +406,7 @@ void World::updateZombies()
 				float dist_x = x2 - x1;
 				float dist_y = y2 - y1;
 				float distance = sqrt(pow(dist_x, 2) + pow(dist_y, 2));
-				if (distance > 25.0f) // moving to target
+				if (distance > melee_distance) // moving to target
 				{
 					zombie.addX(dist_x / (abs(dist_x) + abs(dist_y)) * zombie.getSpeedPerTick());
 					zombie.addY(dist_y / (abs(dist_x) + abs(dist_y)) * zombie.getSpeedPerTick());
@@ -396,13 +414,42 @@ void World::updateZombies()
 				else if (SDL_GetTicks64() > zombie.getMeleeTimer()) // attack target
 				{
 					zombie.addMeleeTimer(zombie.getMeleeTimeout());
-					entities[zombie.getTarget()]->addHealth(-(int)zombie.getStrength());
+					entities[zombie.getTarget()]->hit(-(int)zombie.getStrength());
 				}
 			}
 
-			// passive update of melee attack timer
+			// passive update
 			if (SDL_GetTicks64() > zombie.getMeleeTimer())
 				zombie.addMeleeTimer(zombie.getMeleeTimeout());
+		}
+}
+
+void World::updateCharacters()
+{
+	for (auto& entity : entities)
+		if (typeid(*entity.second) == typeid(Character))
+		{
+			Character& character = dynamic_cast<Character&>(*entity.second);
+			if (SDL_GetTicks64() > character.getMeleeTimer())
+			{
+				int nearest_zombie_id = findEntity(entity.first, typeid(Zombie), Nearest);
+				if (nearest_zombie_id != -1)
+				{
+					if (Calc2dDistance(entities[entity.first]->getX(), entities[entity.first]->getY(), entities[nearest_zombie_id]->getX(),
+						entities[nearest_zombie_id]->getY()) <= melee_distance)
+					{
+						character.setTarget(nearest_zombie_id);
+						entities[nearest_zombie_id]->hit(-(int)character.getStrength());
+						character.addMeleeTimer(character.getMeleeTimeout());
+					}
+				}
+				else
+					character.setTarget(-1);
+			}
+
+			// passive update 
+			if (SDL_GetTicks64() > character.getMeleeTimer())
+				character.addMeleeTimer(character.getMeleeTimeout());
 		}
 }
 
@@ -454,17 +501,24 @@ Entity::Entity(Resources* res, Settings* settings, unsigned int max_health, unsi
 	dstrect.h = tex_size.h;
 	dstrect.w /= settings->getScale();
 	dstrect.h /= settings->getScale();
+
+	// start time for timers
+	melee_timer = SDL_GetTicks64();
 };
 
 Entity::~Entity() {};
 
 void Entity::setX(float x)
 {
+	if (is_hit)
+		is_hit = false;
 	dstrect.x = x;
 }
 
 void Entity::setY(float y)
 {
+	if (is_hit)
+		is_hit = false;
 	dstrect.y = y;
 }
 
@@ -472,6 +526,8 @@ void Entity::addX(float x)
 {
 	if (!x)
 		return;
+	if (is_hit)
+		is_hit = false;
 	if (x < 0)
 		angle = 180;
 	else if (x > 0)
@@ -483,7 +539,18 @@ void Entity::addY(float y)
 {
 	if (!y)
 		return;
+	if (is_hit)
+		is_hit = false;
 	dstrect.y += y;
+}
+
+void Entity::hit(int damage)
+{
+	addHealth(damage);
+	is_hit = true;
+	hit_pos.x = dstrect.x / settings->getScale() + rand() % (int)(dstrect.w - res->icons_textures["hit"].dstrect.w);
+	hit_pos.y = dstrect.y / settings->getScale() + rand() % (int)(dstrect.h - res->icons_textures["hit"].dstrect.h);
+	hit_timer = SDL_GetTicks64() + 200;
 }
 
 // class Character
@@ -653,7 +720,6 @@ Weapon_Shotgun::Weapon_Shotgun(std::string hidden_name, json weapons_data, std::
 Zombie::Zombie(Resources* res, Settings* settings, unsigned int health, float speed, unsigned int strength, SDL_Texture* texture) :
 	Entity(res, settings, health, health, speed, strength, texture, 1000) 
 {
-	melee_timer = SDL_GetTicks64();
 };
 
 Zombie::~Zombie() {};	
@@ -661,7 +727,10 @@ Zombie::~Zombie() {};
 void Zombie::addHealth(int health)
 {
 	if ((int)this->health + health <= 0)
+	{
 		this->health = 0;
+		trigger.dead = true;
+	}
 	else if (this->health + health > max_health)
 		this->health = max_health;
 	else

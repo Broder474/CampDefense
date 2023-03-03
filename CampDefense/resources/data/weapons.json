@@ -1,7 +1,7 @@
 {
     "samples":
     [
-        "glock-19", "barrett-m82", "mp-5", "remington-870"
+        "glock-19", "barrett-m82", "mp-5", "remington-870", "ak-74"
     ],
     "glock-19":
     {
@@ -29,12 +29,12 @@
     {
         "type": "burst-fire",
         "name": "MP-5",
-        "max_distance": 25,
-        "shot_damage": 15,
+        "max_distance": 20,
+        "shot_damage": 10,
         "shot_accuracy": 60,
         "shot_timeout": 0.2,
         "burst_length": 5,
-        "burst_timeout": 1.5,
+        "burst_timeout": 1.0,
         "texture_simple": "resources/textures/weapons/mp-5 S.png",
         "texture_fire": "resources/textures/weapons/mp-5 F.png"
     },
@@ -49,5 +49,18 @@
         "shot_timeout": 2.0,
         "texture_simple": "resources/textures/weapons/remington-870 S.png",
         "texture_fire": "resources/textures/weapons/remington-870 F.png"
+    },
+    "ak-74":
+    {
+        "type": "burst-fire",
+        "name": "AK-74",
+        "max_distance": 25,
+        "shot_damage": 18,
+        "shot_accuracy": 75,
+        "shot_timeout": 0.2,
+        "burst_length": 3,
+        "burst_timeout": 1.4,
+        "texture_simple": "resources/textures/weapons/ak-74 S.png",
+        "texture_fire": "resources/texture/weapons/ak-74 F.png"
     }
 }

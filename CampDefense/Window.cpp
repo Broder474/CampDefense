@@ -192,7 +192,7 @@ void List::removeItem(std::string item_name)
 			setScrollBarPointed({ scroll_bar_rect_current.x + 1, scroll_bar_rect_current.y + 1});
 			scrollBarMove({ scroll_bar_rect_full.x + 1, scroll_bar_rect_full.y + 1 });
 
-			items.erase(item);
+			item = items.erase(item);
 			total_height = (int)items.size() * this->item_rect.h;
 			total_height < this->list_rect.h ? scroll_bar_rect_current.h = this->list_rect.h : scroll_bar_rect_current.h =
 				(int)(((float)this->list_rect.h / total_height) * list_rect.h);
@@ -485,8 +485,9 @@ WinMainMenu::WinMainMenu(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	std::unique_ptr<Image_Button> btnNewGame(new Image_Button(ren, { 810, 470, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinMainMenu.btnNewGame"], settings->getScale(), [&]() {
 			std::unique_ptr<WinGame>winGame(new WinGame(this->ren, this->windows, this->resources, this->settings, this->keys));
-			this->windows.clear();
-			this->windows.push_back(std::move(winGame));
+			auto& wins = windows;
+			wins.clear();
+			wins.push_back(std::move(winGame));
 		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnNewGame));
 
@@ -530,8 +531,9 @@ void WinMainMenu::handleEvents()
 		{
 		case SDL_BUTTON_LEFT:
 			for (auto& btn : buttons)
-				if (btn->isPointed(point_click))
-					btn->onClick(); 
+				if (this->buttons.size() > 0)
+					if (btn->isPointed(point_click))
+						btn->onClick();
 			break;
 		}
 		break;
@@ -641,7 +643,7 @@ void WinGame::handleEvents()
 	{
 	case SDL_QUIT:
 		windows.clear();
-		break;
+		return;
 	case SDL_KEYDOWN:
 	{
 		switch (event.key.keysym.sym)
@@ -805,9 +807,14 @@ void WinGame::update()
 		if (typeid(*entity->second) == typeid(Character))
 			if (dynamic_cast<Character&>(*entity->second).trigger.dead)
 			{
-				world->entities.erase(entity);
+				entity = world->entities.erase(entity);
 				world->trigger.characters_list_changed = true;
 			}
+	// check if zombies are alive
+	for (auto entity = world->entities.begin(); entity != world->entities.end(); entity++)
+		if (typeid(*entity->second) == typeid(Zombie))
+			if (dynamic_cast<Zombie&>(*entity->second).trigger.dead)
+				entity = world->entities.erase(entity);
 
 	// trigger to update list of characters
 	if (world->trigger.characters_list_changed)
@@ -831,9 +838,8 @@ void WinGame::render()
 	for (auto& image : images)
 		image->render();
 
-	// render characters
 	for (auto& entity : world->entities)
-		if (typeid(*entity.second) == typeid(Character))
+		if (typeid(*entity.second) == typeid(Character)) // render characters
 		{
 			Character& character = dynamic_cast<Character&>(*entity.second);
 			SDL_FRect character_dstrect = character.getDestRect() / settings->getScale();
@@ -857,8 +863,19 @@ void WinGame::render()
 				SDL_RenderCopyEx(ren, character.getWeapon()->getTextureSimple(), 0, &weapon_dstrect, -character.getWeaponAngle(), NULL, 
 					SDL_FLIP_HORIZONTAL);
 			}
+			if (character.is_hit) // render hit texture
+				if (character.getHitTimer() > SDL_GetTicks64())
+				{
+					SDL_Rect rect_hit = resources->icons_textures["hit"].dstrect;
+					SDL_Point point_hit = character.getHitPos();
+					rect_hit.x = point_hit.x;
+					rect_hit.y = point_hit.y;
+					SDL_RenderCopy(ren, resources->icons_textures["hit"].texture, 0, &rect_hit);
+				}
+				else
+					character.is_hit = false;
 		}
-		else if (typeid(*entity.second) == typeid(Zombie))
+		else if (typeid(*entity.second) == typeid(Zombie)) // render zombies
 		{
 			Zombie& zombie = dynamic_cast<Zombie&>(*entity.second);
 			SDL_FRect zombie_dstrect = zombie.getDestRect() / settings->getScale();
@@ -870,6 +887,17 @@ void WinGame::render()
 			{
 				SDL_RenderCopyExF(ren, zombie.getTexture(), 0, &zombie_dstrect, 0, NULL, SDL_FLIP_HORIZONTAL);
 			}
+			if (zombie.is_hit) // render hit texture
+				if (zombie.getHitTimer() > SDL_GetTicks64())
+				{
+					SDL_Rect rect_hit = resources->icons_textures["hit"].dstrect;
+					SDL_Point point_hit = zombie.getHitPos();
+					rect_hit.x = point_hit.x;
+					rect_hit.y = point_hit.y;
+					SDL_RenderCopy(ren, resources->icons_textures["hit"].texture, 0, &rect_hit);
+				}
+				else
+					zombie.is_hit = false;
 		}
 
 	for (auto& btn : buttons)
@@ -1408,8 +1436,9 @@ WinGameMenu::WinGameMenu(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 	std::unique_ptr<Image_Button>btnMainMenu(new Image_Button(ren, { 810, 580, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinGameMenu.btnMainMenu"], settings->getScale(), [&]() {
 			std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(this->ren, this->windows, this->resources, this->settings, this->keys));
+			std::vector<std::unique_ptr<Window>>& wins = windows;
 			this->windows.clear();
-			this->windows.push_back(std::move(winMainMenu));
+			wins.push_back(std::move(winMainMenu));
 		}, res->gui_textures["button1"].texture));
 	buttons.push_back(std::move(btnMainMenu));
 
@@ -1674,8 +1703,9 @@ void WinDelSave::handleEvents()
 		{
 		case SDL_BUTTON_LEFT:
 			for (auto& btn : buttons)
-				if (btn->isPointed(point_click))
-					btn->onClick();
+				if (buttons.size() > 0)
+					if (btn->isPointed(point_click))
+						btn->onClick();
 			break;
 		}
 		break;
@@ -1804,6 +1834,7 @@ void WinSettings::BtnSave()
 	game->loadResources();
 
 	std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, game->resources, this->settings, keys));
+	auto& wins = windows;
 	windows.clear();
-	windows.push_back(std::move(winMainMenu));
+	wins.push_back(std::move(winMainMenu));
 }
