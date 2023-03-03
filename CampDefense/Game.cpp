@@ -7,6 +7,7 @@ Game::Game()
     ren = SDL_CreateRenderer(win, -1, 0);
     setStatus(true);
     srand(time(0));
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
     json settings;
     std::ifstream in_settings("settings.json");
@@ -42,8 +43,10 @@ Game::Game()
 
     loadResources();
 
+    keys = SDL_GetKeyboardState(NULL);
+
     // main menu initialization
-    std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, resources, &this->settings));
+    std::unique_ptr<WinMainMenu>winMainMenu(new WinMainMenu(ren, windows, resources, &this->settings, keys));
     windows.push_back(std::move(winMainMenu));
 }
 Game::~Game() {}
@@ -87,5 +90,6 @@ void Game::loadResources()
     std::string lang_file = "resources/lang/" + this->settings.getLang() + ".json";
     if (resources != nullptr)
         resources->~Resources();
-    resources = new Resources(ren, &this->settings, "resources/data/weapons.json", "resources/data/gui.json", lang_file.c_str());
+    resources = new Resources(ren, &this->settings, "resources/data/weapons.json", "resources/data/gui.json", lang_file.c_str(),
+        "resources/data/icons.json", "resources/data/entities.json");
 }

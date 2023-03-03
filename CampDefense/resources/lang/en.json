@@ -22,9 +22,18 @@
     "WinSettings.textLang": "Language",
 
     "WinGame.day": "Day",
-    "WinGame.products": "Products",
-    "WinGame.materials": "Materials",
+    "WinGame.food": "Food",
+    "WinGame.resources": "Resources",
     "WinGame.btnActions": "Actions",
+    "WinGame.btnSearchResources": "Search resources",
+    "WinGame.btnSearchFood": "Search food",
+    "WinGame.btnCharacters": "Characters",
+    "WinGame.cio.health": "Health",
+    "WinGame.cio.consumption": "Consumption",
+    "WinGame.cio.speed_per_second": "Speed",
+    "WinGame.cio.strength": "Strength",
+    "WinGame.cio.combat_skill": "Combat skill",
+    "WinGame.cio.survival_skill": "Survival skill",
 
     "names":
     {

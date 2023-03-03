@@ -22,9 +22,18 @@
     "WinSettings.textLang": "Язык",
 
     "WinGame.day": "День",
-    "WinGame.products": "Продукты",
-    "WinGame.materials": "Материалы",
+    "WinGame.food": "Еда",
+    "WinGame.resources": "Ресурсы",
     "WinGame.btnActions": "Действия",
+    "WinGame.btnSearchResources": "Искать ресурсы",
+    "WinGame.btnSearchFood": "Искать еду",
+    "WinGame.btnCharacters": "Персонажи",
+    "WinGame.cio.health": "Здоровье",
+    "WinGame.cio.consumption": "Потребление",
+    "WinGame.cio.speed_per_second": "Скорость",
+    "WinGame.cio.strength": "Сила",
+    "WinGame.cio.combat_skill": "Боевые навыки",
+    "WinGame.cio.survival_skill": "Навыки выживания",
 
     "names":
     {

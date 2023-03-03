@@ -1,7 +1,7 @@
 {
     "samples":
     [
-        "glock-19", "barrett-m82"
+        "glock-19", "barrett-m82", "mp-5", "remington-870"
     ],
     "glock-19":
     {
@@ -24,5 +24,30 @@
         "shot_timeout": 1.5,
         "texture_simple": "resources/textures/weapons/barrett-m82 S.png",
         "texture_fire": "resources/textures/weapons/barrett-m82 F.png"
+    },
+    "mp-5":
+    {
+        "type": "burst-fire",
+        "name": "MP-5",
+        "max_distance": 25,
+        "shot_damage": 15,
+        "shot_accuracy": 60,
+        "shot_timeout": 0.2,
+        "burst_length": 5,
+        "burst_timeout": 1.5,
+        "texture_simple": "resources/textures/weapons/mp-5 S.png",
+        "texture_fire": "resources/textures/weapons/mp-5 F.png"
+    },
+    "remington-870":
+    {
+        "type": "shotgun",
+        "name": "Remington 870",
+        "max_distance": 15,
+        "pellet_damage": 15,
+        "pellet_accuracy": 70,
+        "pellet_count": 5,
+        "shot_timeout": 2.0,
+        "texture_simple": "resources/textures/weapons/remington-870 S.png",
+        "texture_fire": "resources/textures/weapons/remington-870 F.png"
     }
 }

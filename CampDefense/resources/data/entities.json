@@ -1,0 +1,13 @@
+{
+    "characters": 
+    [
+        "character1", "character2"
+    ],
+    "character1": "resources/textures/entities/character1.png",
+    "character2":  "resources/textures/entities/character2.png",
+    "zombies": 
+    [
+        "zombie1"
+    ],
+    "zombie1": "resources/textures/entities/zombie1.png"
+}

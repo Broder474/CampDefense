@@ -22,9 +22,18 @@
     "WinSettings.textLang": "Мова",
     
     "WinGame.day": "День",
-    "WinGame.products": "Продукти",
-    "WinGame.materials": "Матеріали",
+    "WinGame.food": "Їжа",
+    "WinGame.resources": "Ресурси",
     "WinGame.btnActions": "Дії",
+    "WinGame.btnSearchResources": "Шукати ресурси",
+    "WinGame.btnSearchFood": "Шукати їжу",
+    "WinGame.btnCharacters": "Персонажі",
+    "WinGame.cio.health": "Здоров'я",
+    "WinGame.cio.consumption": "Споживання",
+    "WinGame.cio.speed_per_second": "Швидкість",
+    "WinGame.cio.strength": "Сила",
+    "WinGame.cio.combat_skill": "Бойові навики",
+    "WinGame.cio.survival_skill": "Навики виживання",
 
     "names":
     {

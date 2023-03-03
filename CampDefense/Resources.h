@@ -20,7 +20,8 @@ struct TextureData
 class Resources
 {
 public:
-	Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_file, const char* gui_file, const char* lang_file);
+	Resources(SDL_Renderer* ren, Settings* settings, const char* weapons_file, const char* gui_file, const char* lang_file, const char* icons_file,
+		const char* entities_file);
 	~Resources() 
 	{
 		for (auto it = fonts.begin(); it != fonts.end(); it++)
@@ -45,6 +46,10 @@ public:
 	// gui resources
 	json gui_data;
 	std::map<std::string, TextureData> gui_textures;
+
+	// icons resources
+	json icons_data;
+	std::map<std::string, TextureData> icons_textures;
 private:
 
 	SDL_Renderer* ren;

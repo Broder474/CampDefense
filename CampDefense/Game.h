@@ -33,6 +33,7 @@ public:
 
     SDL_Window* win = nullptr;
     SDL_Renderer* ren = nullptr;
+    const Uint8* keys = nullptr;
 
 private:
     bool status;
