@@ -247,6 +247,8 @@ public:
 	void handleEvents() override;
 	void render() override;
 	void update();
+	void pause();
+	void unpause();
 
 	struct CharacterInfoOutput
 	{
@@ -357,6 +359,7 @@ public:
 		}weapon;
 	};
 
+	Uint64 pause_time = 0;
 	Uint64 update_timer = 0;
 	bool update_status = true;
 	std::unique_ptr<List>characters_list;

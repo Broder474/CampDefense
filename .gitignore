@@ -364,4 +364,4 @@ FodyWeavers.xsd
 
 *.dll
 saves/
-CampDefense/settings.json
+settings.json

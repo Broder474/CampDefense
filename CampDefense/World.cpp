@@ -41,11 +41,7 @@ void World::addHours(int hours)
 			{
 				Character& character = dynamic_cast<Character&>(*entity.second);
 				character.addSatiety(-(int)character.getConsumption()); // decrease satiety on consumption
-				int need_satiety = character.getMaxSatiety() - character.getSatiety(); // need satiety to max satiety
-				int can_be_added_satiety;
-				food - need_satiety >= 0 ? can_be_added_satiety = need_satiety : can_be_added_satiety = food;
-				food -= can_be_added_satiety;
-				character.addSatiety(can_be_added_satiety);
+				feedCharacter(character);
 
 				// triggers
 				character.trigger.satiety = true;
@@ -68,6 +64,7 @@ void World::addHours(int hours)
 						character.addSatiety(-can_be_added_health);
 						character.addHealth(can_be_added_health);
 					}
+					feedCharacter(character);
 				}
 			}
 		trigger.day = true;
@@ -177,6 +174,15 @@ void World::searchResources()
 		}
 	addResources(found_resources);
 	addHours(1);
+}
+
+void World::feedCharacter(Character& character)
+{
+	int need_satiety = character.getMaxSatiety() - character.getSatiety(); // need satiety to max satiety
+	int can_be_added_satiety;
+	food - need_satiety >= 0 ? can_be_added_satiety = need_satiety : can_be_added_satiety = food;
+	food -= can_be_added_satiety;
+	character.addSatiety(can_be_added_satiety);
 }
 
 void World::addCharacter()
@@ -430,22 +436,125 @@ void World::updateCharacters()
 		if (typeid(*entity.second) == typeid(Character))
 		{
 			Character& character = dynamic_cast<Character&>(*entity.second);
-			if (SDL_GetTicks64() > character.getMeleeTimer())
+			int nearest_zombie_id = findEntity(entity.first, typeid(Zombie), Nearest);
+			int before_entity = character.getTarget();
+			character.setTarget(nearest_zombie_id);
+			if (before_entity == -1 && character.getTarget() != -1)
 			{
-				int nearest_zombie_id = findEntity(entity.first, typeid(Zombie), Nearest);
-				if (nearest_zombie_id != -1)
+				if (character.getWeapon() != nullptr)
 				{
-					if (Calc2dDistance(entities[entity.first]->getX(), entities[entity.first]->getY(), entities[nearest_zombie_id]->getX(),
-						entities[nearest_zombie_id]->getY()) <= melee_distance)
+					const type_info& wpn_type = typeid(*character.getWeapon());
+					if (wpn_type == typeid(Weapon_SingleShot))
 					{
-						character.setTarget(nearest_zombie_id);
-						entities[nearest_zombie_id]->hit(-(int)character.getStrength());
-						character.addMeleeTimer(character.getMeleeTimeout());
+						Weapon_SingleShot& weapon = dynamic_cast<Weapon_SingleShot&>(*character.getWeapon());
+						if (weapon.getShotTimer() < SDL_GetTicks64())
+							weapon.setShotTimer(SDL_GetTicks64());
+					}
+					else if (wpn_type == typeid(Weapon_BurstFire))
+					{
+						Weapon_BurstFire& weapon = dynamic_cast<Weapon_BurstFire&>(*character.getWeapon());
+						if (weapon.getBurstTimer() < SDL_GetTicks64())
+							weapon.setBurstTimer(SDL_GetTicks());
+						if (weapon.getShotTimer() < SDL_GetTicks64())
+							weapon.setShotTimer(SDL_GetTicks64());
+					}
+					else if (wpn_type == typeid(Weapon_Shotgun))
+					{
+						Weapon_Shotgun& weapon = dynamic_cast<Weapon_Shotgun&>(*character.getWeapon());
+						if (weapon.getShotTimer() < SDL_GetTicks64())
+							weapon.setShotTimer(SDL_GetTicks64());
 					}
 				}
-				else
-					character.setTarget(-1);
 			}
+				if (nearest_zombie_id != -1) 
+				{
+					float character_x = character.getX(), character_y = 1920 - character.getY(), zombie_x = entities[nearest_zombie_id]->getX(), 
+						zombie_y = 1920 - entities[nearest_zombie_id]->getY();
+
+					float distance = Calc2dDistance(character_x, character_y, zombie_x, zombie_y);
+					if (distance <= melee_distance) // melee attack
+					{
+						if (SDL_GetTicks64() > character.getMeleeTimer())
+						{
+							entities[nearest_zombie_id]->hit(-(int)character.getStrength());
+							character.addMeleeTimer(character.getMeleeTimeout());
+						}
+					}
+					else if (character.getWeapon() != nullptr) // if weapon exist
+					{
+						float angle = (int)(acos(((10 * (-character_x + zombie_x)) / (10 * sqrt(pow(-character_x + zombie_x, 2) + pow(-character_y + zombie_y, 2)))))
+							* 180 / M_PI) % 90;
+						character.setWeaponAngle(angle); // rotate weapon to nearest zombie
+
+						const type_info& wpn_type = typeid(*character.getWeapon());
+						if (wpn_type == typeid(Weapon_SingleShot)) // single shot weapons
+						{
+							Weapon_SingleShot& weapon = dynamic_cast<Weapon_SingleShot&>(*character.getWeapon());
+							if (weapon.getShotTimer() < SDL_GetTicks64())
+							{
+								weapon.addShotTimer(weapon.getShotTimeout());
+								if (distance <= character.getWeapon()->getMaxDistance())
+									if (rand() % 101 <= weapon.getShotAccuracy() + character.getCombatLvl())
+									{
+										entities[nearest_zombie_id]->hit(-(int)weapon.getShotDamage());
+										character.add_combat_xp(100);
+										character.is_shooting = true;
+										character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
+									}
+							}
+						}
+						else if (wpn_type == typeid(Weapon_BurstFire)) // burst fire weapons
+						{
+							Weapon_BurstFire& weapon = dynamic_cast<Weapon_BurstFire&>(*character.getWeapon());
+							if (weapon.getShotTimer() < SDL_GetTicks64())
+							{
+								weapon.addShotTimer(weapon.getShotTimeout());
+								if (weapon.getBurstTimer() < SDL_GetTicks64()) // if false then burst reloading is now
+									if (distance <= weapon.getMaxDistance())
+										if (weapon.getBurstStep() < weapon.getBurstLength())
+										{
+											if (rand() % 101 <= weapon.getShotAccuracy() + character.getCombatLvl())
+											{
+												entities[nearest_zombie_id]->hit(-(int)weapon.getShotDamage());
+												character.add_combat_xp(50);
+												character.is_shooting = true;
+												character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
+											}
+											weapon.addBurstStep(1);
+										}
+										else
+										{
+											weapon.setBurstStep(0);
+											weapon.addBurstTimer(weapon.getBurstTimeout());
+										}
+							}
+						}
+						else if (wpn_type == typeid(Weapon_Shotgun)) // shotguns
+						{
+							Weapon_Shotgun& weapon = dynamic_cast<Weapon_Shotgun&>(*character.getWeapon());
+							if (weapon.getShotTimer() < SDL_GetTicks64())
+							{
+								weapon.addShotTimer(weapon.getShotTimeot());
+								if (distance <= weapon.getMaxDistance())
+								{
+									int damage = 0;
+									int pellet_count = weapon.getPelletCount(), accuracy = weapon.getPelletAccuracy() + character.getCombatLvl(),
+										pellet_damage = -(int)weapon.getPelletDamage();
+									for (int i = 0; i < pellet_count; i++) // calculating hit chance for every pellet
+										if (rand() % 101 < accuracy)
+											damage += pellet_damage;
+									if (damage)
+									{
+										entities[nearest_zombie_id]->hit(damage);
+										character.add_combat_xp(100);
+										character.is_shooting = true;
+										character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
+									}
+								}
+							}
+						}
+					}
+				}
 
 			// passive update 
 			if (SDL_GetTicks64() > character.getMeleeTimer())

@@ -7,6 +7,7 @@
 class Entity;
 class Weapon;
 class World;
+class Character;
 
 class World
 {
@@ -31,12 +32,15 @@ public:
 	bool addResources(int resources);
 	void searchFood();
 	void searchResources();
+	void feedCharacter(Character& character);
 
 	void addCharacter();
 	void removeCharacter(std::string name);
 	void spawnZombies();
 	void updateZombies();
 	void updateCharacters();
+
+	void addZombieSpawnTimer(Uint64 time) { zombie_spawn_timer += time; }
 
 	struct Trigger
 	{
@@ -98,6 +102,7 @@ public:
 	void addMeleeTimer(int time) { melee_timer += time; }
 	void setMeleeTimer(Uint64 time) { melee_timer = time; }
 
+	// animation functions and variables
 	Uint64 getHitTimer() { return hit_timer; }
 	void addHitTimer(Uint64 time) { hit_timer = time; }
 	SDL_Point getHitPos() { return hit_pos; }
@@ -116,6 +121,8 @@ protected:
 	int target_id = -1; // target for attack
 	int melee_timeout = 0;
 	Uint64 melee_timer = 0;
+
+	// animation variables
 	Uint64 hit_timer = 0;
 	SDL_Point hit_pos{ 0 };
 };
@@ -178,6 +185,14 @@ public:
 		bool survival_xp = false;
 	} trigger;
 
+	// animation functions and variables
+	Uint64 getShootingTimer() { return shooting_timer; }
+	void addShootingTimer(Uint64 time) { shooting_timer += time; }
+	void setShootingTimer(Uint64 time) { shooting_timer = time; }
+	int getShootingTimeout() { return shooting_timeout; }
+
+	bool is_shooting = false; // needed for changing weapon texture
+
 protected:
 	int gender = Undefined;
 	std::string name = "";
@@ -196,6 +211,10 @@ protected:
 	unsigned int survival_lvl = 0; // survival level
 	unsigned int survival_xp = 0; // survival xp to next level
 	unsigned int survival_xp_upgrade = 0; // survival xp to next level
+
+	// animation variables
+	Uint64 shooting_timer = 0;
+	int shooting_timeout = 50;
 };
 
 class Zombie : public Entity
@@ -242,11 +261,15 @@ public:
 
 	unsigned int getShotDamage() { return shot_damage; }
 	unsigned int getShotAccuracy() { return shot_accuracy; }
-	float getShotTimeout() { return shot_timeout; }
+	unsigned int getShotTimeout() { return shot_timeout; }
+	Uint64 getShotTimer() { return shot_timer; }
+	void setShotTimer(Uint64 time) { shot_timer = time; }
+	void addShotTimer(Uint64 time) { shot_timer += time; }
 private:
 	unsigned int shot_damage = 0;
 	unsigned int shot_accuracy = 0;
-	float shot_timeout = 0.0f;
+	unsigned int shot_timeout = 0;
+	Uint64 shot_timer = 0;
 };
 
 class Weapon_BurstFire : public Weapon
@@ -257,15 +280,27 @@ public:
 
 	unsigned int getShotDamage() { return shot_damage; }
 	unsigned int getShotAccuracy() { return shot_accuracy; }
-	float getShotTimeout() { return shot_timeout; }
+	unsigned int getShotTimeout() { return shot_timeout; }
 	unsigned int getBurstLength() { return burst_length; }
-	float getBurstTimeout() { return burst_timeout; }
+	unsigned int getBurstTimeout() { return burst_timeout; }
+	Uint64 getShotTimer() { return shot_timer; }
+	void setShotTimer(Uint64 time) { shot_timer = time; }
+	void addShotTimer(Uint64 time) { shot_timer += time; }
+	Uint64 getBurstTimer() { return burst_timer; }
+	void setBurstTimer(Uint64 time) { burst_timer = time; }
+	void addBurstTimer(Uint64 time) { burst_timer += time; }
+	int getBurstStep() { return burst_step; }
+	void addBurstStep(int step) { burst_step += step; }
+	void setBurstStep(int step) { burst_step = step; }
 private:
 	unsigned int shot_damage = 0; // one shot damage
 	unsigned int shot_accuracy = 0; // one shot accuracy 
-	float shot_timeout = 0.0f; // time between two shots of one burst
+	unsigned int shot_timeout = 0; // time between two shots of one burst
 	unsigned int burst_length = 0; // how much bullets a weapon shoots per one burst
-	float burst_timeout = 0.0f; // time between two bursts
+	unsigned int burst_timeout = 0; // time between two bursts
+	Uint64 shot_timer = 0;
+	Uint64 burst_timer = 0;
+	int burst_step = 0;
 };
 
 class Weapon_Shotgun : public Weapon
@@ -277,12 +312,16 @@ public:
 	unsigned int getPelletDamage() { return pellet_damage; }
 	unsigned int getPelletAccuracy() { return pellet_accuracy; }
 	unsigned int getPelletCount() { return pellet_count; }
-	float getShotTimeot() { return shot_timeout; }
+	unsigned int getShotTimeot() { return shot_timeout; }
+	Uint64 getShotTimer() { return shot_timer; }
+	void setShotTimer(Uint64 time) { shot_timer = time; }
+	void addShotTimer(Uint64 time) { shot_timer += time; }
 private:
 	unsigned int pellet_damage = 0; // one pellet damage
 	unsigned int pellet_accuracy = 0; // pullet accuracy
 	unsigned int pellet_count = 0; // count of pellets
-	float shot_timeout = 0.0f; // time between two shots
+	unsigned int shot_timeout = 0; // time between two shots
+	Uint64 shot_timer = 0;
 };
 
 class Building
