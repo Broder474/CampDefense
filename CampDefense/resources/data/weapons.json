@@ -7,10 +7,10 @@
     {
         "type": "single-shot",
         "name": "Glock 19",
-        "max_distance": 15,
+        "max_distance": 450,
         "shot_damage": 32,
         "shot_accuracy": 60,
-        "shot_timeout": 0.8,
+        "shot_timeout": 800,
         "texture_simple": "resources/textures/weapons/glock-19 S.png",
         "texture_fire": "resources/textures/weapons/glock-19 F.png"
     },
@@ -18,10 +18,10 @@
     {
         "type": "single-shot",
         "name": "Barrett M82",
-        "max_distance": 50,
+        "max_distance": 1500,
         "shot_damage": 75,
         "shot_accuracy": 70,
-        "shot_timeout": 1.5,
+        "shot_timeout": 1500,
         "texture_simple": "resources/textures/weapons/barrett-m82 S.png",
         "texture_fire": "resources/textures/weapons/barrett-m82 F.png"
     },
@@ -29,12 +29,12 @@
     {
         "type": "burst-fire",
         "name": "MP-5",
-        "max_distance": 20,
+        "max_distance": 600,
         "shot_damage": 10,
         "shot_accuracy": 60,
-        "shot_timeout": 0.2,
+        "shot_timeout": 200,
         "burst_length": 5,
-        "burst_timeout": 1.0,
+        "burst_timeout": 1000,
         "texture_simple": "resources/textures/weapons/mp-5 S.png",
         "texture_fire": "resources/textures/weapons/mp-5 F.png"
     },
@@ -42,11 +42,11 @@
     {
         "type": "shotgun",
         "name": "Remington 870",
-        "max_distance": 15,
+        "max_distance": 450,
         "pellet_damage": 15,
         "pellet_accuracy": 70,
         "pellet_count": 5,
-        "shot_timeout": 2.0,
+        "shot_timeout": 2000,
         "texture_simple": "resources/textures/weapons/remington-870 S.png",
         "texture_fire": "resources/textures/weapons/remington-870 F.png"
     },
@@ -54,12 +54,12 @@
     {
         "type": "burst-fire",
         "name": "AK-74",
-        "max_distance": 25,
+        "max_distance": 750,
         "shot_damage": 18,
         "shot_accuracy": 75,
-        "shot_timeout": 0.2,
+        "shot_timeout": 200,
         "burst_length": 3,
-        "burst_timeout": 1.4,
+        "burst_timeout": 1400,
         "texture_simple": "resources/textures/weapons/ak-74 S.png",
         "texture_fire": "resources/texture/weapons/ak-74 F.png"
     }

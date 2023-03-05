@@ -560,6 +560,8 @@ WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& window
 	world = new World(res, settings, 0, 6);
 	game->world = this->world;
 
+	update_timer = SDL_GetTicks64();
+
 	// adding random characters
 	for (int i = 0; i < 1 + rand() % 3; i++)
 		world->addCharacter();
@@ -650,6 +652,7 @@ void WinGame::handleEvents()
 		{
 		case SDLK_ESCAPE:
 		{
+			pause();
 			std::unique_ptr<WinGameMenu>winSaveGame(new WinGameMenu(ren, windows, resources, settings, keys));
 			windows.push_back(std::move(winSaveGame));
 			break;
@@ -803,18 +806,26 @@ void WinGame::update()
 	}
 
 	// check if characters are alive
-	for (auto entity = world->entities.begin(); entity != world->entities.end(); entity++)
+	for (auto entity = world->entities.begin(); entity != world->entities.end();)
+	{
 		if (typeid(*entity->second) == typeid(Character))
 			if (dynamic_cast<Character&>(*entity->second).trigger.dead)
 			{
 				entity = world->entities.erase(entity);
 				world->trigger.characters_list_changed = true;
 			}
+		if (entity != world->entities.end())
+			entity++;
+	}
 	// check if zombies are alive
-	for (auto entity = world->entities.begin(); entity != world->entities.end(); entity++)
+	for (auto entity = world->entities.begin(); entity != world->entities.end();)
+	{
 		if (typeid(*entity->second) == typeid(Zombie))
 			if (dynamic_cast<Zombie&>(*entity->second).trigger.dead)
 				entity = world->entities.erase(entity);
+		if (entity != world->entities.end())
+			entity++;
+	}
 
 	// trigger to update list of characters
 	if (world->trigger.characters_list_changed)
@@ -853,15 +864,30 @@ void WinGame::render()
 				else
 					weapon_dstrect.x = character_dstrect.x;
 				weapon_dstrect.y = character_dstrect.y + (character_dstrect.h - weapon_dstrect.h) / 2;
-				SDL_RenderCopyEx(ren, character.getWeapon()->getTextureSimple(), 0, &weapon_dstrect, character.getWeaponAngle(), NULL, SDL_FLIP_NONE);
+				SDL_Texture* tex_weapon = nullptr;
+				if (character.is_shooting)
+					if (character.getShootingTimer() > SDL_GetTicks64())
+						tex_weapon = character.getWeapon()->getTextureFire();
+					else
+						character.is_shooting = false;
+				if (!character.is_shooting)
+					tex_weapon = character.getWeapon()->getTextureSimple();
+				SDL_RenderCopyEx(ren, tex_weapon, 0, &weapon_dstrect, character.getWeaponAngle(), NULL, SDL_FLIP_NONE);
 			}
 			else if (character.getAngle() == 180)
 			{
 				SDL_RenderCopyExF(ren, character.getTexture(), 0, &character_dstrect, 0, NULL, SDL_FLIP_HORIZONTAL);
 				weapon_dstrect.x = character_dstrect.x - weapon_dstrect.w / 3.0f;
 				weapon_dstrect.y = character_dstrect.y + (character_dstrect.h - weapon_dstrect.h) / 2;
-				SDL_RenderCopyEx(ren, character.getWeapon()->getTextureSimple(), 0, &weapon_dstrect, -character.getWeaponAngle(), NULL, 
-					SDL_FLIP_HORIZONTAL);
+				SDL_Texture* tex_weapon = nullptr;
+				if (character.is_shooting)
+					if (character.getShootingTimer() > SDL_GetTicks64())
+						tex_weapon = character.getWeapon()->getTextureFire();
+					else
+						character.is_shooting = false;
+				if (!character.is_shooting)
+					tex_weapon = character.getWeapon()->getTextureSimple();
+				SDL_RenderCopyEx(ren, tex_weapon, 0, &weapon_dstrect, -character.getWeaponAngle(), NULL, SDL_FLIP_HORIZONTAL);
 			}
 			if (character.is_hit) // render hit texture
 				if (character.getHitTimer() > SDL_GetTicks64())
@@ -880,13 +906,9 @@ void WinGame::render()
 			Zombie& zombie = dynamic_cast<Zombie&>(*entity.second);
 			SDL_FRect zombie_dstrect = zombie.getDestRect() / settings->getScale();
 			if (zombie.getAngle() == 0)
-			{
 				SDL_RenderCopyF(ren, zombie.getTexture(), 0, &zombie_dstrect);
-			}
 			else if (zombie.getAngle() == 180)
-			{
 				SDL_RenderCopyExF(ren, zombie.getTexture(), 0, &zombie_dstrect, 0, NULL, SDL_FLIP_HORIZONTAL);
-			}
 			if (zombie.is_hit) // render hit texture
 				if (zombie.getHitTimer() > SDL_GetTicks64())
 				{
@@ -909,6 +931,48 @@ void WinGame::render()
 		text.second->render();
 
 	character_info_output.render();
+}
+
+void WinGame::pause()
+{
+	pause_time = SDL_GetTicks64();
+}
+
+void WinGame::unpause()
+{
+	Uint64 passed_time = SDL_GetTicks64() - pause_time;
+	update_timer += passed_time;
+
+	// update world timers
+	world->addZombieSpawnTimer(passed_time);
+	for (auto& entity : world->entities)
+	{
+		entity.second->addMeleeTimer(passed_time);
+		entity.second->addHitTimer(passed_time);
+		if (typeid(*entity.second) == typeid(Character))
+		{
+			Character& character = dynamic_cast<Character&>(*entity.second);
+			Weapon* weapon = character.getWeapon();
+			if (weapon != nullptr)
+			{
+				const type_info& wpn_type = typeid(*weapon);
+				if (wpn_type == typeid(Weapon_SingleShot))
+					dynamic_cast<Weapon_SingleShot&>(*weapon).addShotTimer(passed_time);
+				else if (wpn_type == typeid(Weapon_BurstFire))
+				{
+					dynamic_cast<Weapon_BurstFire&>(*weapon).addShotTimer(passed_time);
+					dynamic_cast<Weapon_BurstFire&>(*weapon).addBurstTimer(passed_time);
+				}
+				else if (wpn_type == typeid(Weapon_Shotgun))
+					dynamic_cast<Weapon_Shotgun&>(*weapon).addShotTimer(passed_time);
+
+				// animation timers
+				character.addShootingTimer(passed_time);
+			}
+		}
+		// animation timers
+		entity.second->addHitTimer(passed_time);
+	}
 }
 
 WinGame::CharacterInfoOutput::CharacterInfoOutput(SDL_Renderer* ren, Resources* res, Settings* settings):
@@ -1296,8 +1360,8 @@ void WinGame::CharacterInfoOutput::setWeapon()
 		res->icons_textures["shot_accuracy"].dstrect.h };
 		this->weapon.single_shot.icon_shot_accuracy = new Image(ren, res->icons_textures["shot_accuracy"].texture, rect_icon_shot_accuracy, 1.0f);
 
-		this->weapon.single_shot.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr(wpn_single_shot.getShotTimeout(), 1), 
-			scale, 750, 500, { 30, 200, 30, 0 });
+		this->weapon.single_shot.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr((float)wpn_single_shot.getShotTimeout() / 
+			1000, 1), scale, 750, 500, { 30, 200, 30, 0 });
 		SDL_Rect rect_icon_shot_timeout = { (int)(700 / scale), (int)(500 / scale), res->icons_textures["shot_timeout"].dstrect.w,
 			res->icons_textures["shot_timeout"].dstrect.h };
 		this->weapon.single_shot.icon_shot_timeout = new Image(ren, res->icons_textures["shot_timeout"].texture, rect_icon_shot_timeout, 1.0f);
@@ -1319,8 +1383,8 @@ void WinGame::CharacterInfoOutput::setWeapon()
 			res->icons_textures["shot_accuracy"].dstrect.h };
 		this->weapon.burst_fire.icon_shot_accuracy = new Image(ren, res->icons_textures["shot_accuracy"].texture, rect_icon_shot_accuracy, 1.0f);
 
-		this->weapon.burst_fire.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr(wpn_burst_fire.getShotTimeout(), 1), 
-			scale, 750, 500, { 30, 200, 30, 0 });
+		this->weapon.burst_fire.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr((float)wpn_burst_fire.getShotTimeout() / 
+			1000, 1), scale, 750, 500, { 30, 200, 30, 0 });
 		SDL_Rect rect_icon_shot_timeout = { (int)(700 / scale), (int)(500 / scale), res->icons_textures["shot_timeout"].dstrect.w,
 			res->icons_textures["shot_timeout"].dstrect.h };
 		this->weapon.burst_fire.icon_shot_timeout = new Image(ren, res->icons_textures["shot_timeout"].texture, rect_icon_shot_timeout, 1.0f);
@@ -1331,8 +1395,8 @@ void WinGame::CharacterInfoOutput::setWeapon()
 			res->icons_textures["burst_length"].dstrect.h };
 		this->weapon.burst_fire.icon_burst_length = new Image(ren, res->icons_textures["burst_length"].texture, rect_icon_burst_length, 1.0f);
 
-		this->weapon.burst_fire.burst_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr(wpn_burst_fire.getBurstTimeout(), 1), 
-			scale, 750, 600, { 30, 200, 30, 0 });
+		this->weapon.burst_fire.burst_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr((float)wpn_burst_fire.getBurstTimeout() / 
+			1000, 1), scale, 750, 600, { 30, 200, 30, 0 });
 		SDL_Rect rect_icon_burst_timeout = { (int)(700 / scale), (int)(600 / scale), res->icons_textures["burst_timeout"].dstrect.w,
 			res->icons_textures["burst_timeout"].dstrect.h };
 		this->weapon.burst_fire.icon_burst_timeout = new Image(ren, res->icons_textures["burst_timeout"].texture, rect_icon_burst_timeout, 1.0f);
@@ -1360,8 +1424,8 @@ void WinGame::CharacterInfoOutput::setWeapon()
 			res->icons_textures["pellet_count"].dstrect.h };
 		this->weapon.shotgun.icon_pellet_count = new Image(ren, res->icons_textures["pellet_count"].texture, rect_icon_pellet_count, 1.0f);
 
-		this->weapon.shotgun.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr(wpn_shotgun.getShotTimeot(), 1), 
-			scale, 750, 550, { 30, 200, 30, 0 });
+		this->weapon.shotgun.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr((float)wpn_shotgun.getShotTimeot() / 1000,
+			1), scale, 750, 550, { 30, 200, 30, 0 });
 		SDL_Rect rect_icon_shot_timeout = { (int)(700 / scale), (int)(550 / scale), res->icons_textures["shot_timeout"].dstrect.w,
 			res->icons_textures["shot_timeout"].dstrect.h };
 		this->weapon.shotgun.icon_shot_timeout = new Image(ren, res->icons_textures["shot_timeout"].texture, rect_icon_shot_timeout, 1.0f);
@@ -1475,7 +1539,13 @@ void WinGameMenu::handleEvents()
 		switch (event.key.keysym.sym)
 		{
 		case SDLK_ESCAPE:
+			auto& wins = windows;
 			windows.pop_back();
+ 			if (typeid(*wins.back()) == typeid(WinGame))
+			{
+				WinGame& winGame = dynamic_cast<WinGame&>(*wins.back());
+				winGame.unpause();
+			}
 			break;
 		}
 	}
