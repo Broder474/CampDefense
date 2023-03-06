@@ -108,8 +108,9 @@ void World::update()
 		if (typeid(*entity->second) == typeid(Character))
 			if (dynamic_cast<Character&>(*entity->second).trigger.dead)
 			{
-				entity = entities.erase(entity);
-				trigger.characters_list_changed = true;
+				auto entity_to_delete = entity;
+				entity++;
+				removeCharacter(dynamic_cast<Character&>(*entity_to_delete->second).getName());
 			}
 		if (entity != entities.end())
 			entity++;
@@ -211,6 +212,7 @@ void World::feedCharacter(Character& character)
 
 void World::addCharacter()
 {
+	characters_exist = true;
 	int id = findFreeId();
 	int gender = rand() % 2;
 	unsigned int max_health = 50 + rand() % 11 * 10;
@@ -281,7 +283,7 @@ void World::removeCharacter(std::string name)
 		{
 			Character& character = dynamic_cast<Character&>(*entity->second);
 			if (character.getName() == name)
-				entities.erase(entity);
+				entity = entities.erase(entity);
 			else if (character.getName().find(real_name) != -1 && character.getName().size() != real_name.size()) // rename all same names
 			{
 				coicidence_count++;
@@ -298,6 +300,11 @@ void World::removeCharacter(std::string name)
 					character.setName(real_name);
 			}
 	trigger.characters_list_changed = true;
+
+	// game over if no characters
+	if(!std::count_if(entities.begin(), entities.end(), [](std::pair<const int, std::shared_ptr<Entity>>entity) {
+		return typeid(*entity.second) == typeid(Character);
+		})) characters_exist = false;
 }
 
 void World::spawnZombies()
@@ -375,43 +382,43 @@ void World::spawnZombies()
 		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, health, speed, strength, 
 			res->entities_textures[res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())].texture));
 		zombie->setX(1920);
-		zombie->setY(rand() % 1081 + zombie->getDestRect().h / settings->getScale() / 2);
+		zombie->setY(rand() % 1081);
 		entities[findFreeId()] = zombie;
 	}
 
 	for (auto& it : zombies_simple)
 	{
-		float zombie_power = it;
+		float zombie_power = (float)it;
 		float health_factor = 0.5f + (float)(rand() % 21) / 100;
-		health = 10 + zombie_power * 10 * health_factor;
+		health = 10 + (int)zombie_power * 10 * health_factor;
 		zombie_power *= 1 - health_factor;
 		float strength_factor = 0.2f + (float)(rand() % 81) / 100;
-		strength = 2 + zombie_power * 2 * strength_factor;
+		strength = 2 + (int)zombie_power * 2 * strength_factor;
 		zombie_power *= 1 - strength_factor;
 		speed = 3.0f + zombie_power * 0.1f;
 
 		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, health, speed, strength,
 			res->entities_textures[res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())].texture));
 		zombie->setX(1900);
-		zombie->setY(zombie->getDestRect().h / settings->getScale() + rand() % 1080 - 2 * zombie->getDestRect().h / settings->getScale());
+		zombie->setY((float)(rand() % 1081));
 		entities[findFreeId()] = zombie;
 	}
 
 	for (auto& it : zombies_strong)
 	{
-		float zombie_power = it;
+		float zombie_power = (float)it;
 		float health_factor = 0.5f + (float)(rand() % 21) / 100;
-		health = 10 + zombie_power * 10 * health_factor;
+		health = 10 + (int)zombie_power * 10 * health_factor;
 		zombie_power *= 1 - health_factor;
 		float strength_factor = 0.2f + (float)(rand() % 81) / 100;
-		strength = 2 + zombie_power * 2 * strength_factor;
+		strength = 2 + (int)zombie_power * 2 * strength_factor;
 		zombie_power *= 1 - strength_factor;
 		speed = 3.0f + zombie_power * 0.1f;
 
 		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, health, speed, strength,
 			res->entities_textures[res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())].texture));
 		zombie->setX(1900);
-		zombie->setY(zombie->getDestRect().h / settings->getScale() + rand() % 1080 - 2 * zombie->getDestRect().h / settings->getScale());
+		zombie->setY(rand() % 1081);
 		entities[findFreeId()] = zombie;
 	}
 }
@@ -435,7 +442,7 @@ void World::updateZombies()
 				float x2 = entities[target_id]->getX(), y2 = entities[target_id]->getY();
 				float dist_x = x2 - x1;
 				float dist_y = y2 - y1;
-				float distance = sqrt(pow(dist_x, 2) + pow(dist_y, 2));
+				float distance = (float)sqrt(pow(dist_x, 2) + pow(dist_y, 2));
 				if (distance > melee_distance) // moving to target
 				{
 					zombie.addX(dist_x / (abs(dist_x) + abs(dist_y)) * zombie.getSpeedPerTick());
@@ -506,9 +513,11 @@ void World::updateCharacters()
 					}
 					else if (character.getWeapon() != nullptr) // if weapon exist
 					{
-						float angle = (int)(acos(((10 * (-character_x + zombie_x)) / (10 * sqrt(pow(-character_x + zombie_x, 2) + pow(-character_y + zombie_y, 2)))))
-							* 180 / M_PI) % 90;
-						character.setWeaponAngle(angle); // rotate weapon to nearest zombie
+						float angle = (float)acos(((10 * (-character_x + zombie_x)) / (10 * sqrt(pow(-character_x + zombie_x, 2) + pow(-character_y + zombie_y, 2)))))
+							* 180 / M_PI;
+						if (character_y < zombie_y)
+							angle = -angle;
+						character.setWeaponAngle((int)angle % 90); // rotate weapon to nearest zombie
 
 						const type_info& wpn_type = typeid(*character.getWeapon());
 						if (wpn_type == typeid(Weapon_SingleShot)) // single shot weapons
@@ -577,6 +586,10 @@ void World::updateCharacters()
 								}
 							}
 						}
+						if (angle > 90.0f)
+							character.setAngle(180);
+						else
+							character.setAngle(0);
 					}
 				}
 
@@ -663,7 +676,7 @@ void Entity::setY(float y)
 
 void Entity::addX(float x)
 {
-	if (!x)
+	if (!x || (this->dstrect.x + x < 0 || this->dstrect.x + x > 1920))
 		return;
 	if (is_hit)
 		is_hit = false;
@@ -676,7 +689,7 @@ void Entity::addX(float x)
 
 void Entity::addY(float y)
 {
-	if (!y)
+	if (!y || (this->dstrect.y + y < 0 || this->dstrect.y + y > 1080))
 		return;
 	if (is_hit)
 		is_hit = false;

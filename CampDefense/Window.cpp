@@ -607,6 +607,8 @@ WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& window
 		unpause();
 		}, res->gui_textures["button_continue"].texture));
 	buttons["continue"].reset(btnContinue);
+
+	text_game_over = new TextOutputMultiLine(ren, res->fonts["calibri32"], res->lang["WinGame.gameOver"], settings->getScale(), 760, 400, { 200, 200, 60, 0 }, 400);
 	
 	// actions
 	Image_Button* btnActions(new Image_Button(ren, { 300, 1020, 300, 60 }, { 60, 60, 200, 0 }, res->fonts["calibri32"],
@@ -649,16 +651,25 @@ WinGame::~WinGame()
 {
 	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["continue"]).getBackgroundTexture(), 255, 255, 255);
 	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["pause"]).getBackgroundTexture(), 255, 255, 255);
+	text_game_over->~TextOutputMultiLine();
 };
 
 void WinGame::handleEvents()
 {
-	if (!isPaused() && SDL_GetTicks64() >= update_timer)
-		update();
-
 	SDL_Event event;
 	SDL_PollEvent(&event);
 	SDL_Point point_click{ event.button.x, event.button.y };
+
+	if (keys[SDL_SCANCODE_SPACE])
+		if (!world->areCharactersExist())
+		{
+			windows.pop_back();
+			return;
+		}
+	if (!world->areCharactersExist())
+		return;
+	if (!isPaused() && SDL_GetTicks64() >= update_timer)
+		update();
 
 	switch (event.type)
 	{
@@ -740,7 +751,7 @@ void WinGame::handleEvents()
 		}
 	}
 	}
-	if (keys[SDL_SCANCODE_M])
+	if (keys[SDL_SCANCODE_D])
 	{
 		for (auto& entity : world->entities)
 			if (typeid(*entity.second) == typeid(Character))
@@ -749,13 +760,31 @@ void WinGame::handleEvents()
 				character.addX(10 / settings->getScale());
 			}
 	}
-	if (keys[SDL_SCANCODE_N])
+	if (keys[SDL_SCANCODE_A])
 	{
 		for (auto& entity : world->entities)
 			if (typeid(*entity.second) == typeid(Character))
 			{
 				Character& character = dynamic_cast<Character&>(*entity.second);
 				character.addX(-10 / settings->getScale());
+			}
+	}
+	if (keys[SDL_SCANCODE_W])
+	{
+		for (auto& entity : world->entities)
+			if (typeid(*entity.second) == typeid(Character))
+			{
+				Character& character = dynamic_cast<Character&>(*entity.second);
+				character.addY(-10 / settings->getScale());
+			}
+	}
+	if (keys[SDL_SCANCODE_S])
+	{
+		for (auto& entity : world->entities)
+			if (typeid(*entity.second) == typeid(Character))
+			{
+				Character& character = dynamic_cast<Character&>(*entity.second);
+				character.addY(10 / settings->getScale());
 			}
 	}
 	if (keys[SDL_SCANCODE_O])
@@ -929,6 +958,9 @@ void WinGame::render()
 		text.second->render();
 
 	character_info_output.render();
+
+	if (!world->areCharactersExist())
+		text_game_over->render();
 }
 
 void WinGame::pause()

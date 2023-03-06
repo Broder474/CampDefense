@@ -6,7 +6,7 @@ Game::Game()
     win = SDL_CreateWindow("Camp Defense", 0, 0, 1920, 1080, SDL_WINDOW_FULLSCREEN_DESKTOP);
     ren = SDL_CreateRenderer(win, -1, 0);
     setStatus(true);
-    srand(time(0));
+    srand((unsigned int)time(nullptr));
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
     json settings;

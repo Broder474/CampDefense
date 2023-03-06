@@ -34,6 +34,7 @@
     "WinGame.cio.strength": "Сила",
     "WinGame.cio.combat_skill": "Бойові навики",
     "WinGame.cio.survival_skill": "Навики виживання",
+    "WinGame.gameOver": "Гра завершена\nНажміть Space для виходу",
 
     "names":
     {

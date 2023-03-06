@@ -368,6 +368,7 @@ private:
 	std::map<std::string, std::unique_ptr<Button>>buttons;
 	std::vector<std::unique_ptr<Image>> images;
 	std::map<std::string, std::unique_ptr<TextOutputSingleLine>> texts;
+	TextOutputMultiLine* text_game_over;
 
 	World* world = nullptr;
 

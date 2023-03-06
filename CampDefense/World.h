@@ -42,6 +42,7 @@ public:
 
 	void addZombieSpawnTimer(Uint64 time) { zombie_spawn_timer += time; }
 	bool areZombiesExist();
+	bool areCharactersExist() { return characters_exist; }
 
 	struct Trigger
 	{
@@ -67,6 +68,7 @@ private:
 	int zombie_spawn_timeout; // in milliseconds
 	Uint64 zombie_spawn_timer;
 	float melee_distance = 45.0f;
+	bool characters_exist = false;
 
 	int food = 0;
 	int resources = 0;
@@ -93,7 +95,8 @@ public:
 	SDL_FRect getDestRect() { return dstrect; }
 	float getX() { return dstrect.x; }
 	float getY() { return dstrect.y; }
-	float getAngle() { return angle; }
+	int getAngle() { return angle; }
+	void setAngle(int angle) { this->angle = angle; }
 	void setTarget(int id) { this->target_id = id; }
 	int getTarget() { return target_id; }
 	void hit(int damage);
