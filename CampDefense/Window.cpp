@@ -597,6 +597,16 @@ WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& window
 	food += ": " + std::to_string(world->getFood());
 	TextOutputSingleLine* text_food = new TextOutputSingleLine(ren, res->fonts["calibri32"], food, settings->getScale(), 5, 125, { 60, 60, 200, 0 });
 	texts["food"].reset(text_food);
+
+	Image_Button* btnPause(new Image_Button(ren, { 1850, 0, 30, 30 }, { 0 }, res->fonts["calibri32"], "", settings->getScale(), [&]() {
+		pause();
+		}, res->gui_textures["button_pause"].texture)); 
+	buttons["pause"].reset(btnPause);
+
+	Image_Button* btnContinue(new Image_Button(ren, { 1890, 0, 30, 30 }, { 0 }, res->fonts["calibri32"], "", settings->getScale(), [&]() {
+		unpause();
+		}, res->gui_textures["button_continue"].texture));
+	buttons["continue"].reset(btnContinue);
 	
 	// actions
 	Image_Button* btnActions(new Image_Button(ren, { 300, 1020, 300, 60 }, { 60, 60, 200, 0 }, res->fonts["calibri32"],
@@ -607,12 +617,14 @@ WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& window
 	buttons["Actions"].reset(btnActions);
 
 	Image_Button* btnSearchResources(new Image_Button(ren, { 300, 960, 300, 60 }, { 60, 60, 200, 0 }, res->fonts["calibri32"], 
-		res->lang["WinGame.btnSearchResources"], settings->getScale(), [&]() {world->searchResources(); }, res->gui_textures["button1"].texture));
+		res->lang["WinGame.btnSearchResources"], settings->getScale(), [&]() {
+			if (!isPaused()) world->searchResources(); }, res->gui_textures["button1"].texture));
 	btnSearchResources->setVisibility(false);
 	buttons["searchResources"].reset(btnSearchResources);
 
 	Image_Button* btnSearchFood(new Image_Button(ren, { 300, 900, 300, 60 }, { 60, 60, 200, 0 }, res->fonts["calibri32"], res->lang["WinGame.btnSearchFood"],
-		settings->getScale(), [&]() {world->searchFood(); }, res->gui_textures["button1"].texture));
+		settings->getScale(), [&]() {
+			if (!isPaused()) world->searchFood(); }, res->gui_textures["button1"].texture));
 	btnSearchFood->setVisibility(false);
 	buttons["searchFood"].reset(btnSearchFood);
 
@@ -628,13 +640,20 @@ WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& window
 		settings->getScale(), res->fonts["calibri32"], 15));
 	characters_list->setVisibility(false);
 	this->characters_list.reset(characters_list);
+
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["continue"]).getBackgroundTexture(), 150, 150, 150);
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["pause"]).getBackgroundTexture(), 255, 255, 255);
 };
 
-WinGame::~WinGame() {};
+WinGame::~WinGame() 
+{
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["continue"]).getBackgroundTexture(), 255, 255, 255);
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["pause"]).getBackgroundTexture(), 255, 255, 255);
+};
 
 void WinGame::handleEvents()
 {
-	if (SDL_GetTicks64() >= update_timer && update_status == true)
+	if (!isPaused() && SDL_GetTicks64() >= update_timer)
 		update();
 
 	SDL_Event event;
@@ -762,7 +781,8 @@ void WinGame::handleEvents()
 void WinGame::update()
 {
 	update_timer += 50; // warning: "update timer = SDL_GetTicks64() + 50" will lost the time if outside anywhere SDL_Delay is used
-	world->update();
+	if (!isPaused())
+		world->update(); // if game is paused world cannot updates
 	character_info_output.update();
 
 	if (world->trigger.day)
@@ -805,28 +825,6 @@ void WinGame::update()
 		world->trigger.food = false;
 	}
 
-	// check if characters are alive
-	for (auto entity = world->entities.begin(); entity != world->entities.end();)
-	{
-		if (typeid(*entity->second) == typeid(Character))
-			if (dynamic_cast<Character&>(*entity->second).trigger.dead)
-			{
-				entity = world->entities.erase(entity);
-				world->trigger.characters_list_changed = true;
-			}
-		if (entity != world->entities.end())
-			entity++;
-	}
-	// check if zombies are alive
-	for (auto entity = world->entities.begin(); entity != world->entities.end();)
-	{
-		if (typeid(*entity->second) == typeid(Zombie))
-			if (dynamic_cast<Zombie&>(*entity->second).trigger.dead)
-				entity = world->entities.erase(entity);
-		if (entity != world->entities.end())
-			entity++;
-	}
-
 	// trigger to update list of characters
 	if (world->trigger.characters_list_changed)
 	{
@@ -865,12 +863,12 @@ void WinGame::render()
 					weapon_dstrect.x = character_dstrect.x;
 				weapon_dstrect.y = character_dstrect.y + (character_dstrect.h - weapon_dstrect.h) / 2;
 				SDL_Texture* tex_weapon = nullptr;
-				if (character.is_shooting)
+				if (character.isShooting())
 					if (character.getShootingTimer() > SDL_GetTicks64())
 						tex_weapon = character.getWeapon()->getTextureFire();
 					else
-						character.is_shooting = false;
-				if (!character.is_shooting)
+						character.setShooting(false);
+				if (!character.isShooting())
 					tex_weapon = character.getWeapon()->getTextureSimple();
 				SDL_RenderCopyEx(ren, tex_weapon, 0, &weapon_dstrect, character.getWeaponAngle(), NULL, SDL_FLIP_NONE);
 			}
@@ -880,16 +878,16 @@ void WinGame::render()
 				weapon_dstrect.x = character_dstrect.x - weapon_dstrect.w / 3.0f;
 				weapon_dstrect.y = character_dstrect.y + (character_dstrect.h - weapon_dstrect.h) / 2;
 				SDL_Texture* tex_weapon = nullptr;
-				if (character.is_shooting)
+				if (character.isShooting())
 					if (character.getShootingTimer() > SDL_GetTicks64())
 						tex_weapon = character.getWeapon()->getTextureFire();
 					else
-						character.is_shooting = false;
-				if (!character.is_shooting)
+						character.setShooting(false);
+				if (!character.isShooting())
 					tex_weapon = character.getWeapon()->getTextureSimple();
 				SDL_RenderCopyEx(ren, tex_weapon, 0, &weapon_dstrect, -character.getWeaponAngle(), NULL, SDL_FLIP_HORIZONTAL);
 			}
-			if (character.is_hit) // render hit texture
+			if (character.isHit()) // render hit texture
 				if (character.getHitTimer() > SDL_GetTicks64())
 				{
 					SDL_Rect rect_hit = resources->icons_textures["hit"].dstrect;
@@ -899,7 +897,7 @@ void WinGame::render()
 					SDL_RenderCopy(ren, resources->icons_textures["hit"].texture, 0, &rect_hit);
 				}
 				else
-					character.is_hit = false;
+					character.setHit(false);
 		}
 		else if (typeid(*entity.second) == typeid(Zombie)) // render zombies
 		{
@@ -909,7 +907,7 @@ void WinGame::render()
 				SDL_RenderCopyF(ren, zombie.getTexture(), 0, &zombie_dstrect);
 			else if (zombie.getAngle() == 180)
 				SDL_RenderCopyExF(ren, zombie.getTexture(), 0, &zombie_dstrect, 0, NULL, SDL_FLIP_HORIZONTAL);
-			if (zombie.is_hit) // render hit texture
+			if (zombie.isHit()) // render hit texture
 				if (zombie.getHitTimer() > SDL_GetTicks64())
 				{
 					SDL_Rect rect_hit = resources->icons_textures["hit"].dstrect;
@@ -919,7 +917,7 @@ void WinGame::render()
 					SDL_RenderCopy(ren, resources->icons_textures["hit"].texture, 0, &rect_hit);
 				}
 				else
-					zombie.is_hit = false;
+					zombie.setHit(false);
 		}
 
 	for (auto& btn : buttons)
@@ -935,13 +933,23 @@ void WinGame::render()
 
 void WinGame::pause()
 {
+	if (isPaused())
+		return;
+	setPaused(true);
 	pause_time = SDL_GetTicks64();
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["continue"]).getBackgroundTexture(), 255, 255, 255);
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["pause"]).getBackgroundTexture(), 150, 150, 150);
 }
 
 void WinGame::unpause()
 {
+	if (!isPaused())
+		return;
+	setPaused(false);
 	Uint64 passed_time = SDL_GetTicks64() - pause_time;
 	update_timer += passed_time;
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["continue"]).getBackgroundTexture(), 150, 150, 150);
+	SDL_SetTextureColorMod(static_cast<Image_Button&>(*buttons["pause"]).getBackgroundTexture(), 255, 255, 255);
 
 	// update world timers
 	world->addZombieSpawnTimer(passed_time);

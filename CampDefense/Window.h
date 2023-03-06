@@ -60,6 +60,7 @@ public:
 		Button(ren, dstrect, text_color, font, text, scale, onClick), bg_texture(bg_texture) {};
 	~Image_Button() override;
 	void render() override;
+	SDL_Texture* getBackgroundTexture() { return bg_texture; }
 private:
 	SDL_Texture* bg_texture = nullptr;
 };
@@ -249,6 +250,8 @@ public:
 	void update();
 	void pause();
 	void unpause();
+	bool isPaused() { return is_paused; }
+	void setPaused(bool paused) { is_paused = paused; }
 
 	struct CharacterInfoOutput
 	{
@@ -359,16 +362,18 @@ public:
 		}weapon;
 	};
 
-	Uint64 pause_time = 0;
-	Uint64 update_timer = 0;
-	bool update_status = true;
 	std::unique_ptr<List>characters_list;
 	CharacterInfoOutput character_info_output;
 private:
-	World* world = nullptr;
 	std::map<std::string, std::unique_ptr<Button>>buttons;
 	std::vector<std::unique_ptr<Image>> images;
 	std::map<std::string, std::unique_ptr<TextOutputSingleLine>> texts;
+
+	World* world = nullptr;
+
+	Uint64 update_timer = 0;
+	bool is_paused = false;
+	Uint64 pause_time = 0;
 };
 
 class WinGameMenu : public Window

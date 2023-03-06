@@ -41,6 +41,7 @@ public:
 	void updateCharacters();
 
 	void addZombieSpawnTimer(Uint64 time) { zombie_spawn_timer += time; }
+	bool areZombiesExist();
 
 	struct Trigger
 	{
@@ -102,12 +103,12 @@ public:
 	void addMeleeTimer(int time) { melee_timer += time; }
 	void setMeleeTimer(Uint64 time) { melee_timer = time; }
 
-	// animation functions and variables
+	// animation functions
 	Uint64 getHitTimer() { return hit_timer; }
 	void addHitTimer(Uint64 time) { hit_timer = time; }
 	SDL_Point getHitPos() { return hit_pos; }
-
-	bool is_hit = false; // needed for animation of damage receiving
+	bool isHit() { return is_hit; }
+	void setHit(bool hit) { is_hit = hit; }
 protected:
 	Resources* res = nullptr;
 	Settings* settings = nullptr;
@@ -125,6 +126,7 @@ protected:
 	// animation variables
 	Uint64 hit_timer = 0;
 	SDL_Point hit_pos{ 0 };
+	bool is_hit = false; // needed for animation of damage receiving
 };
 
 class Character : public Entity
@@ -187,11 +189,11 @@ public:
 
 	// animation functions and variables
 	Uint64 getShootingTimer() { return shooting_timer; }
-	void addShootingTimer(Uint64 time) { shooting_timer += time; }
 	void setShootingTimer(Uint64 time) { shooting_timer = time; }
+	void addShootingTimer(Uint64 time) { shooting_timer += time; }
 	int getShootingTimeout() { return shooting_timeout; }
-
-	bool is_shooting = false; // needed for changing weapon texture
+	bool isShooting() { return is_shooting; }
+	void setShooting(bool shooting) { is_shooting = shooting; }
 
 protected:
 	int gender = Undefined;
@@ -215,6 +217,7 @@ protected:
 	// animation variables
 	Uint64 shooting_timer = 0;
 	int shooting_timeout = 50;
+	bool is_shooting = false; // needed for changing weapon texture
 };
 
 class Zombie : public Entity
@@ -352,6 +355,8 @@ class Fence : public Building
 
 class Barbed_Wire : public Building
 {
+public:
+protected:
 	float slowdown = 0.0f;
 	int damage_per_tick = 0;
 };

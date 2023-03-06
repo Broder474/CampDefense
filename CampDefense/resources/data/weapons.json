@@ -61,6 +61,6 @@
         "burst_length": 3,
         "burst_timeout": 1400,
         "texture_simple": "resources/textures/weapons/ak-74 S.png",
-        "texture_fire": "resources/texture/weapons/ak-74 F.png"
+        "texture_fire": "resources/textures/weapons/ak-74 F.png"
     }
 }

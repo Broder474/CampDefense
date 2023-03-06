@@ -102,6 +102,28 @@ void World::update()
 	updateZombies();
 	updateCharacters();
 
+	// check if characters are alive
+	for (auto entity = entities.begin(); entity != entities.end();)
+	{
+		if (typeid(*entity->second) == typeid(Character))
+			if (dynamic_cast<Character&>(*entity->second).trigger.dead)
+			{
+				entity = entities.erase(entity);
+				trigger.characters_list_changed = true;
+			}
+		if (entity != entities.end())
+			entity++;
+	}
+	// check if zombies are alive
+	for (auto entity = entities.begin(); entity != entities.end();)
+	{
+		if (typeid(*entity->second) == typeid(Zombie))
+			if (dynamic_cast<Zombie&>(*entity->second).trigger.dead)
+				entity = entities.erase(entity);
+		if (entity != entities.end())
+			entity++;
+	}
+
 	if (status == Fight)
 		spawnZombies();
 
@@ -128,8 +150,10 @@ bool World::addFood(int food)
 	return true;
 }
 
-bool World::addResources(int resources)
+bool World::addResources(int resources) // return value: true - if resources was added, false - not added
 {
+	if (areZombiesExist())
+		return false;
 	trigger.resources = true;
 	if (this->resources + resources < 0)
 		return false;
@@ -140,17 +164,17 @@ bool World::addResources(int resources)
 
 void World::searchFood()
 {
-	if (hour >= fight_start || hour < fight_end)
+	if (hour >= fight_start || hour < fight_end || areZombiesExist())
 		return;
 	int found_food = 0;
 	for (auto& entity : entities)
 		if (typeid(*entity.second) == typeid(Character))
 		{
 			Character& character = dynamic_cast<Character&>(*entity.second);
-			if (rand() % 101 > 33 - (int)character.getSurvivalLvl())
+			int survival_level = character.getSurvivalLvl();
+			if (rand() % 101 > 33 - survival_level)
 				found_food += 1;
-			if (character.getSurvivalLvl() > 0)
-				found_food += rand() % (int)character.getSurvivalLvl() + 1;
+			found_food += rand() % (survival_level + 1);
 			character.add_survival_xp(100);
 		}
 	addFood(found_food);
@@ -159,7 +183,7 @@ void World::searchFood()
 
 void World::searchResources()
 {
-	if (hour >= fight_start || hour < fight_end)
+	if (hour >= fight_start || hour < fight_end || areZombiesExist())
 		return;
 	int found_resources = 0;
 	for (auto& entity : entities)
@@ -498,7 +522,7 @@ void World::updateCharacters()
 									{
 										entities[nearest_zombie_id]->hit(-(int)weapon.getShotDamage());
 										character.add_combat_xp(100);
-										character.is_shooting = true;
+										character.setShooting(true);
 										character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
 									}
 							}
@@ -517,7 +541,7 @@ void World::updateCharacters()
 											{
 												entities[nearest_zombie_id]->hit(-(int)weapon.getShotDamage());
 												character.add_combat_xp(50);
-												character.is_shooting = true;
+												character.setShooting(true);
 												character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
 											}
 											weapon.addBurstStep(1);
@@ -547,7 +571,7 @@ void World::updateCharacters()
 									{
 										entities[nearest_zombie_id]->hit(damage);
 										character.add_combat_xp(100);
-										character.is_shooting = true;
+										character.setShooting(true);
 										character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
 									}
 								}
@@ -596,6 +620,12 @@ int World::findEntity(int basic_entity_id, const type_info& type_search_entity, 
 			}
 		}
 	return found_id;
+}
+
+bool World::areZombiesExist()
+{
+	return std::any_of(entities.begin(), entities.end(), [](std::pair<const int, std::shared_ptr<Entity>>& entity) {
+		return typeid(*entity.second) == typeid(Zombie); });
 }
 
 // class Entity
