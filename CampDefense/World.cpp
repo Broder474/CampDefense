@@ -3,7 +3,7 @@
 #include "Functions.h"
 
 // class World
-World::World(Resources* res, Settings* settings, unsigned int day, unsigned int hour): res(res), settings(settings), day(day)
+World::World(Resources* res, Settings* settings, const Uint8* keys, unsigned int day, unsigned int hour): res(res), settings(settings), keys(keys), day(day)
 {
 	addHours(hour);
 }
@@ -124,6 +124,37 @@ void World::update()
 		if (entity != entities.end())
 			entity++;
 	}
+	// manual character control
+	if (getSelectedId() != -1)
+	{
+		auto& selected_entity = entities[getSelectedId()];
+		float speed_per_tick = selected_entity->getSpeedPerTick();
+		float hspeed = 0.0f, vspeed = 0.0f;
+		if (keys[SDL_SCANCODE_D])
+			hspeed = speed_per_tick;
+		else if (keys[SDL_SCANCODE_A])
+			hspeed = -speed_per_tick;
+		if (keys[SDL_SCANCODE_W])
+		{
+			if (abs(hspeed) == speed_per_tick)
+			{
+				hspeed /= 2;
+				vspeed = -speed_per_tick / 2;
+			}
+			else
+				vspeed = -speed_per_tick;
+		}
+		else if (keys[SDL_SCANCODE_S])
+			if (abs(hspeed) == speed_per_tick)
+			{
+				hspeed /= 2;
+				vspeed = speed_per_tick / 2;
+			}
+			else
+				vspeed = speed_per_tick;
+		selected_entity->addX(hspeed);
+		selected_entity->addY(vspeed);
+	}
 
 	if (status == Fight)
 		spawnZombies();
@@ -219,7 +250,7 @@ void World::addCharacter()
 	if (gender == Character::Male)
 		max_health += 10;
 	unsigned int health = max_health;
-	float speed_per_tact = 4.0f + (float)(rand() % 101) / 100; // min - 4.0f, max - 5.0f
+	float speed_per_tact = 8.0f + (float)(rand() % 201) / 100; // min - 8.0f, max - 10.0f
 	unsigned int strength = 5; // minimum melee attack
 	unsigned int chance = rand() % 101;
 	if (chance > 90)
@@ -283,7 +314,11 @@ void World::removeCharacter(std::string name)
 		{
 			Character& character = dynamic_cast<Character&>(*entity->second);
 			if (character.getName() == name)
+			{
+				if (entity->first == selected_id)
+					selected_id = -1;
 				entity = entities.erase(entity);
+			}
 			else if (character.getName().find(real_name) != -1 && character.getName().size() != real_name.size()) // rename all same names
 			{
 				coicidence_count++;
@@ -689,7 +724,7 @@ void Entity::addX(float x)
 
 void Entity::addY(float y)
 {
-	if (!y || (this->dstrect.y + y < 0 || this->dstrect.y + y > 1080))
+	if (!y || (this->dstrect.y + y < 0 || this->dstrect.y + y > 1070))
 		return;
 	if (is_hit)
 		is_hit = false;

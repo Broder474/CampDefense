@@ -557,7 +557,7 @@ WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& window
 	Window(ren, windows, res, settings, keys), character_info_output(ren, res, settings)
 {
 	// world creating
-	world = new World(res, settings, 0, 6);
+	world = new World(res, settings, keys, 0, 6);
 	game->world = this->world;
 
 	update_timer = SDL_GetTicks64();
@@ -660,6 +660,7 @@ void WinGame::handleEvents()
 	SDL_PollEvent(&event);
 	SDL_Point point_click{ event.button.x, event.button.y };
 
+	// checks for game over
 	if (keys[SDL_SCANCODE_SPACE])
 		if (!world->areCharactersExist())
 		{
@@ -668,6 +669,7 @@ void WinGame::handleEvents()
 		}
 	if (!world->areCharactersExist())
 		return;
+
 	if (!isPaused() && SDL_GetTicks64() >= update_timer)
 		update();
 
@@ -704,9 +706,37 @@ void WinGame::handleEvents()
 			}
 			else
 			{
+				bool button_clicked = false;
 				for (auto& btn : buttons)
 					if (btn.second->isPointed(point_click))
+					{
 						btn.second->onClick();
+						button_clicked = true;
+						break;
+					}
+				if (button_clicked)
+					break;
+
+				bool entity_selected = false;
+				for (auto& entity : world->entities)
+					if (typeid(*entity.second) == typeid(Character))
+					{
+						// selecting character
+						SDL_Point scaled_click = point_click;
+						scaled_click.x *= settings->getScale();
+						scaled_click.y *= settings->getScale();
+						Character& character = dynamic_cast<Character&>(*entity.second);
+						if (scaled_click.x >= character.getX() && scaled_click.x <= character.getX() + character.getDestRect().w && scaled_click.y >=
+							character.getY() && scaled_click.y <= character.getY() + character.getDestRect().h)
+						{
+							world->setSelectedId(entity.first);
+							entity_selected = true;
+							break;
+						}
+					}
+				if (entity_selected)
+					break;
+
 				if (characters_list->getVisibility())
 				{
 					std::string selected_character_name = "";
@@ -727,8 +757,9 @@ void WinGame::handleEvents()
 					else
 						characters_list->clearSelectedItem();
 				}
+				else // unsellecting character
+					world->setSelectedId(-1);
 			}
-
 			break;
 		}
 		break;
@@ -751,67 +782,15 @@ void WinGame::handleEvents()
 		}
 	}
 	}
-	if (keys[SDL_SCANCODE_D])
-	{
-		for (auto& entity : world->entities)
-			if (typeid(*entity.second) == typeid(Character))
-			{
-				Character& character = dynamic_cast<Character&>(*entity.second);
-				character.addX(10 / settings->getScale());
-			}
-	}
-	if (keys[SDL_SCANCODE_A])
-	{
-		for (auto& entity : world->entities)
-			if (typeid(*entity.second) == typeid(Character))
-			{
-				Character& character = dynamic_cast<Character&>(*entity.second);
-				character.addX(-10 / settings->getScale());
-			}
-	}
-	if (keys[SDL_SCANCODE_W])
-	{
-		for (auto& entity : world->entities)
-			if (typeid(*entity.second) == typeid(Character))
-			{
-				Character& character = dynamic_cast<Character&>(*entity.second);
-				character.addY(-10 / settings->getScale());
-			}
-	}
-	if (keys[SDL_SCANCODE_S])
-	{
-		for (auto& entity : world->entities)
-			if (typeid(*entity.second) == typeid(Character))
-			{
-				Character& character = dynamic_cast<Character&>(*entity.second);
-				character.addY(10 / settings->getScale());
-			}
-	}
-	if (keys[SDL_SCANCODE_O])
-	{
-		for (auto& entity : world->entities)
-			if (typeid(*entity.second) == typeid(Character))
-			{
-				Character& character = dynamic_cast<Character&>(*entity.second);
-				character.setWeaponAngle(character.getWeaponAngle() + 5);
-			}
-	}
-	if (keys[SDL_SCANCODE_P])
-	{
-		for (auto& entity : world->entities)
-			if (typeid(*entity.second) == typeid(Character))
-			{
-				Character& character = dynamic_cast<Character&>(*entity.second);
-				character.setWeaponAngle(character.getWeaponAngle() - 5);
-			}
-	}
 }
 
 void WinGame::update()
 {
 	update_timer += 50; // warning: "update timer = SDL_GetTicks64() + 50" will lost the time if outside anywhere SDL_Delay is used
 	if (!isPaused())
+	{
 		world->update(); // if game is paused world cannot updates
+	}
 	character_info_output.update();
 
 	if (world->trigger.day)

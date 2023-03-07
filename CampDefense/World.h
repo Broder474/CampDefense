@@ -14,7 +14,7 @@ class World
 public:
 	enum search_type { Nearest, Farthest };
 
-	World(Resources* resources, Settings* settings, unsigned int day, unsigned int hour);
+	World(Resources* resources, Settings* settings, const Uint8* keys, unsigned int day, unsigned int hour);
 	std::map<int, std::shared_ptr<Entity>>entities;
 	int findFreeId();
 	int findEntity(int basic_entity_id, const type_info& type_search_entity, int search_type);
@@ -40,6 +40,9 @@ public:
 	void updateZombies();
 	void updateCharacters();
 
+	void setSelectedId(int id) { selected_id = id; }
+	int getSelectedId() { return selected_id; }
+
 	void addZombieSpawnTimer(Uint64 time) { zombie_spawn_timer += time; }
 	bool areZombiesExist();
 	bool areCharactersExist() { return characters_exist; }
@@ -57,6 +60,7 @@ public:
 private:
 	Resources* res = nullptr;
 	Settings* settings = nullptr;
+	const Uint8* keys = nullptr;
 	int day = 0;
 	int hour = 0;
 	Uint64 ticks = 0;
@@ -69,6 +73,7 @@ private:
 	Uint64 zombie_spawn_timer;
 	float melee_distance = 45.0f;
 	bool characters_exist = false;
+	int selected_id = -1;
 
 	int food = 0;
 	int resources = 0;
