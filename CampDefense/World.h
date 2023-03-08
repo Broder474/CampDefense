@@ -13,37 +13,54 @@ class World
 {
 public:
 	enum search_type { Nearest, Farthest };
+	enum generate_type { Empty, Random };
 
-	World(Resources* resources, Settings* settings, const Uint8* keys, unsigned int day, unsigned int hour);
+	World(Resources* resources, Settings* settings, Uint64 time, const Uint8* keys, unsigned int day, unsigned int hour, int generate_type);
 	std::map<int, std::shared_ptr<Entity>>entities;
-	int findFreeId();
-	int findEntity(int basic_entity_id, const type_info& type_search_entity, int search_type);
-	void addHours(int hours);
-	void addMinutes(int minutes);
+
+	// setters and getters
+	void setDay(int day) { this->day = day; }
 	int getDay() { return day; }
+	void setHour(int hour) { this->hour = hour; }
 	int getHour() { return hour; }
+	void setMinutes(int minutes) { this->minutes = minutes; }
 	int getMinutes() { return minutes; }
 	Uint64 getTicks() { return ticks; }
-	void update();
-
+	Uint64 getTime() { return time; }
+	Uint64* getPtrTime() { return &time; }
+	void setTime(Uint64 time) { this->time = time; }
+	void setFood(int food) { this->food = food; }
 	int getFood() { return food; }
-	bool addFood(int food);
+	void setResources(int resources) { this->resources = resources; }
 	int getResources() { return resources; }
+	void setSelectedId(int id) { selected_id = id; }
+	int getSelectedId() { return selected_id; }
+	int getStatus() { return status; }
+	void setStatus(int status) { this->status = status; }
+	void setCharactersExist(bool status) { characters_exist = status; }
+	void setZombieSpawnTimeout(int timeout) { this->zombie_spawn_timeout = timeout; }
+	int getZombieSpawnTimeout() { return zombie_spawn_timeout; }
+	void setZombieSpawnTimer(Uint64 timer) { this->zombie_spawn_timer = timer; }
+	Uint64 getZombieSpawnTimer() { return zombie_spawn_timer; }
+
+	void addHours(int hours);
+	void addMinutes(int minutes);
+	bool addFood(int food);
 	bool addResources(int resources);
+	void addZombieSpawnTimer(Uint64 time) { zombie_spawn_timer += time; }
+	void addRandomCharacter();
+
+	void update();
+	int findFreeId();
+	int findEntity(int basic_entity_id, const type_info& type_search_entity, int search_type);
 	void searchFood();
 	void searchResources();
 	void feedCharacter(Character& character);
-
-	void addCharacter();
 	void removeCharacter(std::string name);
 	void spawnZombies();
 	void updateZombies();
 	void updateCharacters();
 
-	void setSelectedId(int id) { selected_id = id; }
-	int getSelectedId() { return selected_id; }
-
-	void addZombieSpawnTimer(Uint64 time) { zombie_spawn_timer += time; }
 	bool areZombiesExist();
 	bool areCharactersExist() { return characters_exist; }
 
@@ -63,17 +80,18 @@ private:
 	const Uint8* keys = nullptr;
 	int day = 0;
 	int hour = 0;
+	Uint64 time = 0;
 	Uint64 ticks = 0;
 	enum {Peace, Fight};
 	int status = Peace;
 	int minutes = 0; // used only during fight to automatically add time
-	int fight_start = 22;
-	int fight_end = 6;
+	int fight_start = 22; // zombies start attack at 22
+	int fight_end = 6; // zombies end attack at 6
 	int zombie_spawn_timeout; // in milliseconds
 	Uint64 zombie_spawn_timer;
 	float melee_distance = 45.0f;
 	bool characters_exist = false;
-	int selected_id = -1;
+	int selected_id = -1; // selected character id for manual control 
 
 	int food = 0;
 	int resources = 0;
@@ -82,8 +100,8 @@ private:
 class Entity
 {
 public:
-	Entity(Resources* res, Settings* settings, unsigned int max_health, unsigned int health, float speed_per_tick, unsigned int strength, 
-		SDL_Texture* texture, int melee_timeout);
+	Entity(Resources* res, Settings* settings, Uint64* time, unsigned int max_health, unsigned int health, float speed_per_tick, unsigned int strength, 
+		std::string tex_name, int melee_timeout);
 	virtual ~Entity() = 0;
 	unsigned int getHealth() { return health; }
 	unsigned int getMaxHealth() { return max_health; }
@@ -105,7 +123,10 @@ public:
 	void setTarget(int id) { this->target_id = id; }
 	int getTarget() { return target_id; }
 	void hit(int damage);
+	std::string getTextureName() { return tex_name; }
 
+	Uint64* getTime() { return time; }
+	void setTime(Uint64* time) { this->time = time; }
 	int getMeleeTimeout() { return melee_timeout; }
 	Uint64 getMeleeTimer() { return melee_timer; }
 	void addMeleeTimer(int time) { melee_timer += time; }
@@ -126,10 +147,12 @@ protected:
 	float speed_per_tick = 0.0f; // how much cells the entity can pass per one tact
 	unsigned int strength = 0; // melee damage
 	SDL_Texture* texture = nullptr;
+	std::string tex_name = "";
 	SDL_FRect dstrect{ 0 };
 	int target_id = -1; // target for attack
 	int melee_timeout = 0;
 	Uint64 melee_timer = 0;
+	Uint64* time = nullptr;
 
 	// animation variables
 	Uint64 hit_timer = 0;
@@ -140,8 +163,8 @@ protected:
 class Character : public Entity
 {
 public:
-	Character(Resources* res, Settings* settings, int gender, unsigned int max_health, unsigned int health, float speed, unsigned int strength, 
-		SDL_Texture* texture, std::string name, std::string weapon_name,  unsigned int consumption, unsigned int max_satiety,
+	Character(Resources* res, Settings* settings, Uint64* time, int gender, unsigned int max_health, unsigned int health, float speed, unsigned int strength,
+		std::string tex_name, std::string name, std::string weapon_name,  unsigned int consumption, unsigned int max_satiety,
 		unsigned int satiety, unsigned int combat_lvl, unsigned int combat_xp, unsigned int survival_lvl, unsigned int survival_xp);
 	~Character() override;
 
@@ -231,7 +254,7 @@ protected:
 class Zombie : public Entity
 {
 public:
-	Zombie(Resources* res, Settings* settings, unsigned int health, float speed, unsigned int strength, SDL_Texture* texture);
+	Zombie(Resources* res, Settings* settings, Uint64* time, unsigned int max_health, unsigned int health, float speed, unsigned int strength, std::string tex_name);
 	~Zombie() override;
 
 	void addHealth(int health) override;
@@ -323,7 +346,7 @@ public:
 	unsigned int getPelletDamage() { return pellet_damage; }
 	unsigned int getPelletAccuracy() { return pellet_accuracy; }
 	unsigned int getPelletCount() { return pellet_count; }
-	unsigned int getShotTimeot() { return shot_timeout; }
+	unsigned int getShotTimeout() { return shot_timeout; }
 	Uint64 getShotTimer() { return shot_timer; }
 	void setShotTimer(Uint64 time) { shot_timer = time; }
 	void addShotTimer(Uint64 time) { shot_timer += time; }

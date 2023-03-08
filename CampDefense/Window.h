@@ -130,6 +130,7 @@ public:
 	void setScrollBarPointed(bool isScrollBarPointed);
 	bool getScrollBarPointed();
 	std::string getClickedItem(SDL_Point point);
+	std::string getSelectedItem() { if (selected_item != nullptr) return selected_item->item_name; return ""; }
 	bool getVisibility() { return visible; }
 	void setVisibility(bool visible) { this->visible = visible; }
 	void invertVisibility() { visible = !visible; }
@@ -226,6 +227,31 @@ private:
 	int width = 0;
 };
 
+class TextInput
+{
+public:
+	TextInput(SDL_Renderer* ren, TTF_Font* font, float scale, SDL_Rect dstrect, SDL_Color bg_color, SDL_Color text_color);
+	~TextInput();
+	void render();
+	std::string getText() { return text; }
+	void setText(std::string text) { this->text = text; }
+	void generateTexture();
+	bool isPointed(SDL_Point point);
+	void setSelected(bool status) {is_selected = status;}
+	bool isSelected() { return is_selected; }
+protected:
+	SDL_Renderer* ren = nullptr;
+	TTF_Font* font = nullptr;
+	float scale = 0.0f;
+	SDL_Rect dstrect{ 0 };
+	SDL_Color bg_color{ 0 };
+	SDL_Color text_color{ 0 };
+	std::string text = "";
+	SDL_Texture* text_texture = nullptr;
+	SDL_Rect text_dstrect{ 0 };
+	bool is_selected = false;
+};
+
 class WinMainMenu : public Window
 {
 public:
@@ -242,7 +268,7 @@ private:
 class WinGame : public Window
 {
 public:
-	WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* resources, Settings* settings, const Uint8* keys);
+	WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* resources, Settings* settings, const Uint8* keys, int generate_type);
 	~WinGame() override;
 	
 	void handleEvents() override;
@@ -252,6 +278,7 @@ public:
 	void unpause();
 	bool isPaused() { return is_paused; }
 	void setPaused(bool paused) { is_paused = paused; }
+	World* getWorld() { return world; }
 
 	struct CharacterInfoOutput
 	{
@@ -401,6 +428,11 @@ public:
 private:
 	std::vector<std::unique_ptr<Button>> buttons;
 	std::vector<std::unique_ptr<Image>> images;
+	std::unique_ptr<List> saves_list = nullptr;
+	TextInput* text_input = nullptr;
+	std::vector<unsigned int>allowable_keys{ SDLK_q, SDLK_w, SDLK_e, SDLK_r, SDLK_t, SDLK_y, SDLK_u, SDLK_i, SDLK_o, SDLK_p, SDLK_a, SDLK_s, SDLK_d, SDLK_f,
+	SDLK_g, SDLK_h, SDLK_j, SDLK_k, SDLK_l, SDLK_z, SDLK_x, SDLK_c, SDLK_v, SDLK_b, SDLK_n, SDLK_m, SDLK_SPACE, SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5,
+	SDLK_6, SDLK_7, SDLK_8, SDLK_9};
 
 	void BtnSaveGame();
 	void BtnDeleteSave();

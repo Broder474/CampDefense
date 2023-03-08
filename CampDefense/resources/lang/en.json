@@ -40,11 +40,12 @@
     {
         "male":
         [
-            "Bob"
+            "Bob", "Markus", "Steve", "James", "Jason", "John", "Robert", "Michael", "William", "Richard", "David", "Thomas"
         ],
         "female":
         [
-            "Olivia"
+            "Olivia", "Amelia", "Mary", "Mia", "Harper", "Emma", "Sofia", "Elizabeth", "Chloe", "Mila", "Violet", "Emilia", "Hannah", "Zoe",
+            "Naomi", "Bella"
         ]
     }
 }

@@ -478,13 +478,51 @@ void TextOutputMultiLine::render()
 	SDL_RenderCopy(ren, text_texture, nullptr, &text_dstrect);
 }
 
+TextInput::TextInput(SDL_Renderer* ren, TTF_Font* font, float scale, SDL_Rect dstrect, SDL_Color bg_color, SDL_Color text_color): ren(ren), font(font),
+scale(scale), dstrect(dstrect), bg_color(bg_color), text_color(text_color)
+{
+	this->dstrect /= scale;
+	text_dstrect = this->dstrect;
+}
+
+TextInput::~TextInput()
+{
+	SDL_DestroyTexture(text_texture);
+}
+
+void TextInput::generateTexture()
+{
+	SDL_Surface* surface = TTF_RenderUTF8_Blended(font, (const char*)text.c_str(), text_color);
+	if (text_texture != nullptr)
+		SDL_DestroyTexture(text_texture);
+	text_texture = SDL_CreateTextureFromSurface(ren, surface);
+	SDL_FreeSurface(surface);
+	SDL_QueryTexture(text_texture, nullptr, nullptr, &text_dstrect.w, &text_dstrect.h);
+	text_dstrect.w /= scale;
+	text_dstrect.h /= scale;
+}
+
+void TextInput::render()
+{
+	SDL_SetRenderDrawColor(ren, bg_color.r, bg_color.g, bg_color.b, bg_color.a);
+	SDL_RenderFillRect(ren, &dstrect);
+	SDL_RenderCopy(ren, text_texture, nullptr, &text_dstrect);
+}
+
+bool TextInput::isPointed(SDL_Point point)
+{
+	if (point.x >= dstrect.x && point.x <= dstrect.x + dstrect.w && point.y >= dstrect.y && point.y <= dstrect.y + dstrect.h)
+		return true;
+	return false;
+}
+
 // WinMainMenu class
 WinMainMenu::WinMainMenu(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings, const Uint8* keys):
 	Window(ren, windows, res, settings, keys)
 {
 	std::unique_ptr<Image_Button> btnNewGame(new Image_Button(ren, { 810, 470, 300, 60 }, { 90, 90, 140, 0 }, res->fonts["calibri32"],
 		res->lang["WinMainMenu.btnNewGame"], settings->getScale(), [&]() {
-			std::unique_ptr<WinGame>winGame(new WinGame(this->ren, this->windows, this->resources, this->settings, this->keys));
+			std::unique_ptr<WinGame>winGame(new WinGame(this->ren, this->windows, this->resources, this->settings, this->keys, World::generate_type::Random));
 			auto& wins = windows;
 			wins.clear();
 			wins.push_back(std::move(winGame));
@@ -553,27 +591,14 @@ void WinMainMenu::render()
 };
 
 // WinGame class
-WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings, const Uint8* keys) :
+WinGame::WinGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings, const Uint8* keys, int generate_type) :
 	Window(ren, windows, res, settings, keys), character_info_output(ren, res, settings)
 {
 	// world creating
-	world = new World(res, settings, keys, 0, 6);
+	world = new World(res, settings, 0, keys, 0, 6, generate_type);
 	game->world = this->world;
 
 	update_timer = SDL_GetTicks64();
-
-	// adding random characters
-	for (int i = 0; i < 1 + rand() % 3; i++)
-		world->addCharacter();
-	int entity_num = 1;
-	for (auto& entity : world->entities)
-		if (typeid(*entity.second) == typeid(Character))
-		{
-			Character& character = dynamic_cast<Character&>(*entity.second);
-			character.setX(100);
-			character.setY(entity_num * 100);
-			entity_num++;
-		}
 
 	// gui initialization
 	std::unique_ptr<Image>bg_image(new Image(ren, res->gui_textures["background2"].texture, res->gui_textures["background2"].dstrect, 1.0f));
@@ -786,11 +811,9 @@ void WinGame::handleEvents()
 
 void WinGame::update()
 {
-	update_timer += 50; // warning: "update timer = SDL_GetTicks64() + 50" will lost the time if outside anywhere SDL_Delay is used
-	if (!isPaused())
-	{
-		world->update(); // if game is paused world cannot updates
-	}
+	update_timer += 50; 
+	if (!isPaused()) // if game is paused world cannot updates
+		world->update();
 	character_info_output.update();
 
 	if (world->trigger.day)
@@ -872,7 +895,7 @@ void WinGame::render()
 				weapon_dstrect.y = character_dstrect.y + (character_dstrect.h - weapon_dstrect.h) / 2;
 				SDL_Texture* tex_weapon = nullptr;
 				if (character.isShooting())
-					if (character.getShootingTimer() > SDL_GetTicks64())
+					if (character.getShootingTimer() > world->getTime())
 						tex_weapon = character.getWeapon()->getTextureFire();
 					else
 						character.setShooting(false);
@@ -887,7 +910,7 @@ void WinGame::render()
 				weapon_dstrect.y = character_dstrect.y + (character_dstrect.h - weapon_dstrect.h) / 2;
 				SDL_Texture* tex_weapon = nullptr;
 				if (character.isShooting())
-					if (character.getShootingTimer() > SDL_GetTicks64())
+					if (character.getShootingTimer() > world->getTime())
 						tex_weapon = character.getWeapon()->getTextureFire();
 					else
 						character.setShooting(false);
@@ -896,7 +919,7 @@ void WinGame::render()
 				SDL_RenderCopyEx(ren, tex_weapon, 0, &weapon_dstrect, -character.getWeaponAngle(), NULL, SDL_FLIP_HORIZONTAL);
 			}
 			if (character.isHit()) // render hit texture
-				if (character.getHitTimer() > SDL_GetTicks64())
+				if (character.getHitTimer() > world->getTime())
 				{
 					SDL_Rect rect_hit = resources->icons_textures["hit"].dstrect;
 					SDL_Point point_hit = character.getHitPos();
@@ -916,7 +939,7 @@ void WinGame::render()
 			else if (zombie.getAngle() == 180)
 				SDL_RenderCopyExF(ren, zombie.getTexture(), 0, &zombie_dstrect, 0, NULL, SDL_FLIP_HORIZONTAL);
 			if (zombie.isHit()) // render hit texture
-				if (zombie.getHitTimer() > SDL_GetTicks64())
+				if (zombie.getHitTimer() > world->getTime())
 				{
 					SDL_Rect rect_hit = resources->icons_textures["hit"].dstrect;
 					SDL_Point point_hit = zombie.getHitPos();
@@ -967,7 +990,6 @@ void WinGame::unpause()
 	for (auto& entity : world->entities)
 	{
 		entity.second->addMeleeTimer(passed_time);
-		entity.second->addHitTimer(passed_time);
 		if (typeid(*entity.second) == typeid(Character))
 		{
 			Character& character = dynamic_cast<Character&>(*entity.second);
@@ -1443,7 +1465,7 @@ void WinGame::CharacterInfoOutput::setWeapon()
 			res->icons_textures["pellet_count"].dstrect.h };
 		this->weapon.shotgun.icon_pellet_count = new Image(ren, res->icons_textures["pellet_count"].texture, rect_icon_pellet_count, 1.0f);
 
-		this->weapon.shotgun.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr((float)wpn_shotgun.getShotTimeot() / 1000,
+		this->weapon.shotgun.shot_timeout = new TextOutputSingleLine(ren, res->fonts["calibri32"], FloatToStr((float)wpn_shotgun.getShotTimeout() / 1000,
 			1), scale, 750, 550, { 30, 200, 30, 0 });
 		SDL_Rect rect_icon_shot_timeout = { (int)(700 / scale), (int)(550 / scale), res->icons_textures["shot_timeout"].dstrect.w,
 			res->icons_textures["shot_timeout"].dstrect.h };
@@ -1593,9 +1615,24 @@ WinSaveGame::WinSaveGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>
 
 	std::unique_ptr<Image>bg_image(new Image(ren, res->gui_textures["background1"].texture, { 260, 140, 1400, 800 }, settings->getScale()));
 	images.push_back(std::move(bg_image));
+
+	text_input = new TextInput(ren, res->fonts["calibri32"], settings->getScale(), { 600, 700, 800, 70 }, { 150, 150, 150, 0 }, { 40, 40, 40, 0 });
+	List* saves_list = new List(ren, { 600, 170, 800, 520 }, { 0, 0, 770, 100 }, { 170, 125, 125, 0 }, { 110, 110, 180, 0 }, { 100, 100, 100, 0 },
+		{ 50, 50, 50, 0 }, settings->getScale(), res->fonts["calibri32"], 30);
+	this->saves_list.reset(saves_list);
+
+	fs::path saves_dir = fs::current_path().string() + "/saves";
+	if (!fs::exists(saves_dir))
+		fs::create_directory(saves_dir);
+	for (auto& save_path : fs::directory_iterator(saves_dir))
+		if (save_path.path().extension() == ".zomb")
+			saves_list->addItem(save_path.path().stem().string());
 };
 
-WinSaveGame::~WinSaveGame() {};
+WinSaveGame::~WinSaveGame() 
+{
+	text_input->~TextInput();
+};
 
 void WinSaveGame::handleEvents() 
 {
@@ -1612,23 +1649,71 @@ void WinSaveGame::handleEvents()
 	}
 	case SDL_MOUSEBUTTONDOWN:
 	{
+		text_input->setSelected(false);
 		switch (event.button.button)
 		{
 		case SDL_BUTTON_LEFT:
+			bool btn_clicked = false;
 			for (auto& btn : buttons)
 				if (btn->isPointed(point_click))
+				{
 					btn->onClick();
+					btn_clicked = true;
+					break;
+				}
+			if (btn_clicked)
+				break;
+			if (!saves_list->setScrollBarPointed(point_click))
+				saves_list->getClickedItem(point_click);
+			if (text_input->isPointed(point_click))
+				text_input->setSelected(true);
 			break;
 		}
 		break;
 	}
 	case SDL_KEYDOWN:
+	{
+		if (text_input->isSelected())
+		{
+			int sym = event.key.keysym.sym;
+			if (sym == SDLK_BACKSPACE)
+			{
+				std::string curr_text = text_input->getText();
+				if (curr_text.size() > 0)
+				{
+					curr_text.erase(curr_text.end() - 1, curr_text.end());
+					text_input->setText(curr_text);
+					text_input->generateTexture();
+				}
+			}
+			if (std::any_of(allowable_keys.begin(), allowable_keys.end(), [&](int value) {
+				return value == sym;
+				}))
+			{
+				std::string curr_text = text_input->getText();
+				if (curr_text.size() < 30) // max size of input = 30 symbols
+				{
+					text_input->setText(curr_text + (char)sym);
+					text_input->generateTexture();
+					break;
+				}
+			}
+		}
 		switch (event.key.keysym.sym)
 		{
 		case SDLK_ESCAPE:
 			windows.pop_back();
 			break;
 		}
+	}
+	case SDL_MOUSEMOTION:
+	{
+		switch (event.button.button)
+		{
+		case SDL_BUTTON_LEFT:
+			saves_list->scrollBarMove(point_click);
+		}
+	}
 	}
 };
 
@@ -1638,11 +1723,100 @@ void WinSaveGame::render()
 		image->render();
 	for (auto& btn : buttons)
 		btn->render();
+	saves_list->render();
+	text_input->render();
 };
 
-void WinSaveGame::BtnSaveGame() {};
+void WinSaveGame::BtnSaveGame() 
+{
+	std::string save_name = text_input->getText();
+	if (save_name.size() > 0)
+	{
+		for (auto& win : windows)
+			if (typeid(*win) == typeid(WinGame))
+			{
+				json save;
+				World* world = dynamic_cast<WinGame&>(*win).getWorld();
+				save = {
+					{"day", world->getDay()},
+					{"hour", world->getHour()},
+					{"minutes", world->getMinutes()},
+					{"time", world->getTime()},
+					{"resources", world->getResources()},
+					{"food", world->getFood()},
+					{"status", world->getStatus()},
+					{"zombie_spawn_timeout", world->getZombieSpawnTimeout()},
+					{"zombie_spawn_timer", world->getZombieSpawnTimer()},
+					{"characters", {}},
+					{"zombies", {}},
+				};
+				for (auto& entity : world->entities)
+					if (typeid(*entity.second) == typeid(Character))
+					{
+						Character& character = dynamic_cast<Character&>(*entity.second);
+						json object = {
+							{"max_health", character.getMaxHealth()},
+							{"health", character.getHealth()},
+							{"angle", character.getAngle()},
+							{"speed", character.getSpeedPerTick()},
+							{"strength", character.getStrength()},
+							{"tex_name", character.getTextureName()},
+							{"x", character.getDestRect().x},
+							{"y", character.getDestRect().y},
+							{"melee_timeout", character.getMeleeTimeout()},
+							{"melee_timer", character.getMeleeTimer()},
+							{"gender", character.getGender()},
+							{"name", character.getName()},
+							{"weapon_name", character.getWeapon()->getHiddenName()},
+							{"consumption", character.getConsumption()},
+							{"max_satiety", character.getMaxSatiety()},
+							{"satiety", character.getSatiety()},
+							{"combat_lvl", character.getCombatLvl()},
+							{"combat_xp", character.getCombatXp()},
+							{"combat_xp_upgrade", character.getCombatXpUpgrade()},
+							{"survival_lvl", character.getSurvivalLvl()},
+							{"survival_xp", character.getSurvivalXp()},
+							{"survival_xp_upgrade", character.getSurvivalXpUpgrade()},
+						};
+						save["characters"].push_back(object);
+					}
+					else if (typeid(*entity.second) == typeid(Zombie))
+					{
+						Zombie& zombie = dynamic_cast<Zombie&>(*entity.second);
 
-void WinSaveGame::BtnDeleteSave() {};
+						json object = {
+							{"max_health", zombie.getMaxHealth()},
+							{"health", zombie.getHealth()},
+							{"angle", zombie.getAngle()},
+							{"speed", zombie.getSpeedPerTick()},
+							{"strength", zombie.getStrength()},
+							{"tex_name", zombie.getTextureName()},
+							{"x", zombie.getDestRect().x},
+							{"y", zombie.getDestRect().y},
+							{"melee_timeout", zombie.getMeleeTimeout()},
+							{"melee_timer", zombie.getMeleeTimer()},
+						};
+						save["zombies"].push_back(object);
+					}
+				std::ofstream save_file("saves/" + save_name + ".zomb");
+				save_file << save;
+				save_file.close();
+				
+				windows.pop_back();
+				break;
+			}
+	}
+};
+
+void WinSaveGame::BtnDeleteSave() 
+{
+	if (saves_list->selected_item != nullptr)
+		if (saves_list->selected_item->item_name != "")
+		{
+			std::unique_ptr<WinDelSave>winDelSave(new WinDelSave(ren, windows, resources, settings, keys, saves_list));
+			windows.push_back(std::move(winDelSave));
+		}
+};
 
 // class WinLoadGame
 WinLoadGame::WinLoadGame(SDL_Renderer* ren, std::vector<std::unique_ptr<Window>>& windows, Resources* res, Settings* settings, const Uint8* keys) :
@@ -1688,7 +1862,10 @@ void WinLoadGame::handleEvents()
 
 			for (auto& btn : buttons)
 				if (btn->isPointed(point_click))
+				{
 					btn->onClick();
+					break;
+				}
 			break;
 		}
 		break;
@@ -1730,7 +1907,55 @@ void WinLoadGame::render()
 		btn->render();
 };
 
-void WinLoadGame::BtnLoadGame() {};
+void WinLoadGame::BtnLoadGame() 
+{
+	std::string save_name = saves_list->getSelectedItem();
+	if (save_name == "") // if save not selected
+		return;
+	std::ifstream save_file("saves/" + save_name + ".zomb");
+	if (!save_file.is_open())
+		return;
+	std::unique_ptr<WinGame>winGame(new WinGame(ren, windows, resources, settings, keys, World::generate_type::Empty));
+	World* world = winGame->getWorld();
+	json save = json::parse(save_file);
+	world->setDay(save["day"]);
+	world->setHour(save["hour"]);
+	world->setMinutes(save["minutes"]);
+	world->setTime(save["time"]);
+	world->setResources(save["resources"]);
+	world->setFood(save["food"]);
+	world->setStatus(save["status"]);
+	world->setZombieSpawnTimeout(save["zombie_spawn_timeout"]);
+	world->setZombieSpawnTimer(save["zombie_spawn_timer"]);
+
+	for (auto& it : save["characters"])
+	{
+		std::shared_ptr<Character>character(new Character(resources, settings, world->getPtrTime(), it["gender"], it["max_health"], it["health"], 
+			it["speed"], it["strength"], it["tex_name"], it["name"], it["weapon_name"], (unsigned int)it["consumption"],
+			(unsigned int)it["max_satiety"], (unsigned int)it["satiety"], (unsigned int)it["combat_lvl"], (unsigned int)it["combat_xp"],
+			(unsigned int)it["survival_lvl"], (unsigned int)it["survival_xp"]));
+		character->setX(it["x"]);
+		character->setY(it["y"]);
+		world->entities[world->findFreeId()] = character;
+		world->setCharactersExist(true);
+		world->trigger.characters_list_changed = true;
+	}
+	for (auto& it : save["zombies"])
+	{
+		std::shared_ptr<Zombie>zombie(new Zombie(resources, settings, world->getPtrTime(), it["max_health"], it["health"], it["speed"], it["strength"],
+			it["tex_name"]));
+		zombie->setX(it["x"]);
+		zombie->setY(it["y"]);
+		world->entities[world->findFreeId()] = zombie;
+	}
+
+	auto& wins = windows;
+	auto& res = game->resources;
+	windows.clear();
+	wins.push_back(std::move(winGame));
+	SDL_SetTextureColorMod(res->gui_textures["button_continue"].texture, 150, 150, 150);
+	SDL_SetTextureColorMod(res->gui_textures["button_pause"].texture, 255, 255, 255);
+};
 
 void WinLoadGame::LoadSaves()
 {
@@ -1744,12 +1969,11 @@ void WinLoadGame::LoadSaves()
 
 void WinLoadGame::BtnDeleteSave() 
 {
-	if (saves_list->selected_item != nullptr)
-		if (saves_list->selected_item->item_name != "")
-		{
-			std::unique_ptr<WinDelSave>winDelSave(new WinDelSave(ren, windows, resources, settings, keys, saves_list));
-			windows.push_back(std::move(winDelSave));
-		}
+	if (saves_list->getSelectedItem() != "")
+	{
+		std::unique_ptr<WinDelSave>winDelSave(new WinDelSave(ren, windows, resources, settings, keys, saves_list));
+		windows.push_back(std::move(winDelSave));
+	}
 }
 
 // class WinDelSave
