@@ -35,16 +35,18 @@
     "WinGame.cio.combat_skill": "Combat skill",
     "WinGame.cio.survival_skill": "Survival skill",
     "WinGame.gameOver": "Game over\nPress Space to quit",
+    "WinGame.workshop": "Workshop",
 
     "names":
     {
         "male":
         [
-            "Bob"
+            "Bob", "Markus", "Steve", "James", "Jason", "John", "Robert", "Michael", "William", "Richard", "David", "Thomas"
         ],
         "female":
         [
-            "Olivia"
+            "Olivia", "Amelia", "Mary", "Mia", "Harper", "Emma", "Sofia", "Elizabeth", "Chloe", "Mila", "Violet", "Emilia", "Hannah", "Zoe",
+            "Naomi", "Bella"
         ]
     }
 }

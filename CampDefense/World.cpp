@@ -3,9 +3,27 @@
 #include "Functions.h"
 
 // class World
-World::World(Resources* res, Settings* settings, const Uint8* keys, unsigned int day, unsigned int hour): res(res), settings(settings), keys(keys), day(day)
+World::World(Resources* res, Settings* settings, Uint64 time, const Uint8* keys, unsigned int day, unsigned int hour, int generate_type): res(res), 
+settings(settings), time(time), keys(keys), day(day)
 {
 	addHours(hour);
+	if (generate_type == generate_type::Empty)
+		return;
+	else if (generate_type == generate_type::Random)
+	{
+		// adding random characters
+		for (int i = 0; i < 1 + rand() % 3; i++)
+			addRandomCharacter();
+		int entity_num = 1;
+		for (auto& entity : entities)
+			if (typeid(*entity.second) == typeid(Character))
+			{
+				Character& character = dynamic_cast<Character&>(*entity.second);
+				character.setX(100);
+				character.setY(entity_num * 100);
+				entity_num++;
+			}
+	}
 }
 
 int World::findFreeId()
@@ -73,7 +91,7 @@ void World::addHours(int hours)
 	{
 		if (hour >= fight_start || hour < fight_end)
 		{
-			zombie_spawn_timer = SDL_GetTicks64();
+			zombie_spawn_timer = time;
 			status = Fight;
 		}
 			minutes = 0;
@@ -98,6 +116,7 @@ void World::addMinutes(int minutes)
 void World::update()
 {
 	ticks++;
+	time += 50;
 
 	updateZombies();
 	updateCharacters();
@@ -241,7 +260,7 @@ void World::feedCharacter(Character& character)
 	character.addSatiety(can_be_added_satiety);
 }
 
-void World::addCharacter()
+void World::addRandomCharacter()
 {
 	characters_exist = true;
 	int id = findFreeId();
@@ -250,7 +269,7 @@ void World::addCharacter()
 	if (gender == Character::Male)
 		max_health += 10;
 	unsigned int health = max_health;
-	float speed_per_tact = 8.0f + (float)(rand() % 201) / 100; // min - 8.0f, max - 10.0f
+	float speed_per_tact = 12.0f + (float)(rand() % 401) / 100; // min - 12.0f, max - 16.0f
 	unsigned int strength = 5; // minimum melee attack
 	unsigned int chance = rand() % 101;
 	if (chance > 90)
@@ -294,10 +313,10 @@ void World::addCharacter()
 	// get random weapon hidden name
 	std::string weapon_hidden_name = res->weapons_data["samples"][rand() % res->weapons_data["samples"].size()];
 
-	// get random json object name for textures
-	SDL_Texture* texture = res->entities_textures[res->entities_data["characters"][rand() % res->entities_data["characters"].size()]].texture;
+	// get random texture name
+	std::string tex_name = res->entities_data["characters"][rand() % res->entities_data["characters"].size()];
 
-	std::shared_ptr<Character> character(new Character(res, settings, gender, max_health, health, speed_per_tact, strength, texture, name,
+	std::shared_ptr<Character> character(new Character(res, settings, &time, gender, max_health, health, speed_per_tact, strength, tex_name, name,
 		weapon_hidden_name, consumption, max_satiety, satiety, 0u, 0u, 0u, 0u));
 	entities[id] = character;
 	trigger.characters_list_changed = true;
@@ -344,7 +363,7 @@ void World::removeCharacter(std::string name)
 
 void World::spawnZombies()
 {
-	if (SDL_GetTicks64() < zombie_spawn_timer)
+	if (time < zombie_spawn_timer)
 		return;
 	int power = 100 + 20 * day;
 	int group_power = 20 + (float)day * 0.5;
@@ -414,8 +433,8 @@ void World::spawnZombies()
 		zombie_power *= 1 - strength_factor;
 		speed = 3.0f + zombie_power * 0.1f;
 
-		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, health, speed, strength, 
-			res->entities_textures[res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())].texture));
+		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, &time, health, health, speed, strength, 
+			res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())));
 		zombie->setX(1920);
 		zombie->setY(rand() % 1081);
 		entities[findFreeId()] = zombie;
@@ -432,8 +451,8 @@ void World::spawnZombies()
 		zombie_power *= 1 - strength_factor;
 		speed = 3.0f + zombie_power * 0.1f;
 
-		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, health, speed, strength,
-			res->entities_textures[res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())].texture));
+		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, &time, health, health, speed, strength,
+			res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())));
 		zombie->setX(1900);
 		zombie->setY((float)(rand() % 1081));
 		entities[findFreeId()] = zombie;
@@ -450,8 +469,8 @@ void World::spawnZombies()
 		zombie_power *= 1 - strength_factor;
 		speed = 3.0f + zombie_power * 0.1f;
 
-		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, health, speed, strength,
-			res->entities_textures[res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())].texture));
+		std::shared_ptr<Zombie>zombie(new Zombie(res, settings, &time, health, health, speed, strength,
+			res->entities_data["zombies"].at(rand() % res->entities_data["zombies"].size())));
 		zombie->setX(1900);
 		zombie->setY(rand() % 1081);
 		entities[findFreeId()] = zombie;
@@ -483,7 +502,7 @@ void World::updateZombies()
 					zombie.addX(dist_x / (abs(dist_x) + abs(dist_y)) * zombie.getSpeedPerTick());
 					zombie.addY(dist_y / (abs(dist_x) + abs(dist_y)) * zombie.getSpeedPerTick());
 				}
-				else if (SDL_GetTicks64() > zombie.getMeleeTimer()) // attack target
+				else if (time > zombie.getMeleeTimer()) // attack target
 				{
 					zombie.addMeleeTimer(zombie.getMeleeTimeout());
 					entities[zombie.getTarget()]->hit(-(int)zombie.getStrength());
@@ -491,7 +510,7 @@ void World::updateZombies()
 			}
 
 			// passive update
-			if (SDL_GetTicks64() > zombie.getMeleeTimer())
+			if (time > zombie.getMeleeTimer())
 				zombie.addMeleeTimer(zombie.getMeleeTimeout());
 		}
 }
@@ -513,22 +532,22 @@ void World::updateCharacters()
 					if (wpn_type == typeid(Weapon_SingleShot))
 					{
 						Weapon_SingleShot& weapon = dynamic_cast<Weapon_SingleShot&>(*character.getWeapon());
-						if (weapon.getShotTimer() < SDL_GetTicks64())
-							weapon.setShotTimer(SDL_GetTicks64());
+						if (weapon.getShotTimer() < time)
+							weapon.setShotTimer(time);
 					}
 					else if (wpn_type == typeid(Weapon_BurstFire))
 					{
 						Weapon_BurstFire& weapon = dynamic_cast<Weapon_BurstFire&>(*character.getWeapon());
-						if (weapon.getBurstTimer() < SDL_GetTicks64())
-							weapon.setBurstTimer(SDL_GetTicks());
-						if (weapon.getShotTimer() < SDL_GetTicks64())
-							weapon.setShotTimer(SDL_GetTicks64());
+						if (weapon.getBurstTimer() < time)
+							weapon.setBurstTimer(time);
+						if (weapon.getShotTimer() < time)
+							weapon.setShotTimer(time);
 					}
 					else if (wpn_type == typeid(Weapon_Shotgun))
 					{
 						Weapon_Shotgun& weapon = dynamic_cast<Weapon_Shotgun&>(*character.getWeapon());
-						if (weapon.getShotTimer() < SDL_GetTicks64())
-							weapon.setShotTimer(SDL_GetTicks64());
+						if (weapon.getShotTimer() < time)
+							weapon.setShotTimer(time);
 					}
 				}
 			}
@@ -540,7 +559,7 @@ void World::updateCharacters()
 					float distance = Calc2dDistance(character_x, character_y, zombie_x, zombie_y);
 					if (distance <= melee_distance) // melee attack
 					{
-						if (SDL_GetTicks64() > character.getMeleeTimer())
+						if (time > character.getMeleeTimer())
 						{
 							entities[nearest_zombie_id]->hit(-(int)character.getStrength());
 							character.addMeleeTimer(character.getMeleeTimeout());
@@ -558,7 +577,7 @@ void World::updateCharacters()
 						if (wpn_type == typeid(Weapon_SingleShot)) // single shot weapons
 						{
 							Weapon_SingleShot& weapon = dynamic_cast<Weapon_SingleShot&>(*character.getWeapon());
-							if (weapon.getShotTimer() < SDL_GetTicks64())
+							if (weapon.getShotTimer() < time)
 							{
 								weapon.addShotTimer(weapon.getShotTimeout());
 								if (distance <= character.getWeapon()->getMaxDistance())
@@ -567,17 +586,17 @@ void World::updateCharacters()
 										entities[nearest_zombie_id]->hit(-(int)weapon.getShotDamage());
 										character.add_combat_xp(100);
 										character.setShooting(true);
-										character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
+										character.setShootingTimer(time + character.getShootingTimeout());
 									}
 							}
 						}
 						else if (wpn_type == typeid(Weapon_BurstFire)) // burst fire weapons
 						{
 							Weapon_BurstFire& weapon = dynamic_cast<Weapon_BurstFire&>(*character.getWeapon());
-							if (weapon.getShotTimer() < SDL_GetTicks64())
+							if (weapon.getShotTimer() < time)
 							{
 								weapon.addShotTimer(weapon.getShotTimeout());
-								if (weapon.getBurstTimer() < SDL_GetTicks64()) // if false then burst reloading is now
+								if (weapon.getBurstTimer() < time) // if false then burst reloading is now
 									if (distance <= weapon.getMaxDistance())
 										if (weapon.getBurstStep() < weapon.getBurstLength())
 										{
@@ -586,7 +605,7 @@ void World::updateCharacters()
 												entities[nearest_zombie_id]->hit(-(int)weapon.getShotDamage());
 												character.add_combat_xp(50);
 												character.setShooting(true);
-												character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
+												character.setShootingTimer(time + character.getShootingTimeout());
 											}
 											weapon.addBurstStep(1);
 										}
@@ -600,9 +619,9 @@ void World::updateCharacters()
 						else if (wpn_type == typeid(Weapon_Shotgun)) // shotguns
 						{
 							Weapon_Shotgun& weapon = dynamic_cast<Weapon_Shotgun&>(*character.getWeapon());
-							if (weapon.getShotTimer() < SDL_GetTicks64())
+							if (weapon.getShotTimer() < time)
 							{
-								weapon.addShotTimer(weapon.getShotTimeot());
+								weapon.addShotTimer(weapon.getShotTimeout());
 								if (distance <= weapon.getMaxDistance())
 								{
 									int damage = 0;
@@ -616,7 +635,7 @@ void World::updateCharacters()
 										entities[nearest_zombie_id]->hit(damage);
 										character.add_combat_xp(100);
 										character.setShooting(true);
-										character.setShootingTimer(SDL_GetTicks64() + character.getShootingTimeout());
+										character.setShootingTimer(time + character.getShootingTimeout());
 									}
 								}
 							}
@@ -629,7 +648,7 @@ void World::updateCharacters()
 				}
 
 			// passive update 
-			if (SDL_GetTicks64() > character.getMeleeTimer())
+			if (time > character.getMeleeTimer())
 				character.addMeleeTimer(character.getMeleeTimeout());
 		}
 }
@@ -677,11 +696,12 @@ bool World::areZombiesExist()
 }
 
 // class Entity
-Entity::Entity(Resources* res, Settings* settings, unsigned int max_health, unsigned int health, float speed_per_tick, 
-	unsigned int strength, SDL_Texture* texture, int melee_timeout) :
-	res(res), settings(settings), max_health(max_health), health(health), speed_per_tick(speed_per_tick), strength(strength), texture(texture),
+Entity::Entity(Resources* res, Settings* settings, Uint64* time, unsigned int max_health, unsigned int health, float speed_per_tick,
+	unsigned int strength, std::string tex_name, int melee_timeout) :
+	res(res), settings(settings), time(time), max_health(max_health), health(health), speed_per_tick(speed_per_tick), strength(strength), tex_name(tex_name),
 	melee_timeout(melee_timeout)
 {
+	texture = res->entities_textures[tex_name].texture;
 	SDL_Rect tex_size{ 0 };
 	SDL_QueryTexture(texture, nullptr, nullptr, &tex_size.w, &tex_size.h);
 	dstrect.w = tex_size.w;
@@ -690,7 +710,7 @@ Entity::Entity(Resources* res, Settings* settings, unsigned int max_health, unsi
 	dstrect.h /= settings->getScale();
 
 	// start time for timers
-	melee_timer = SDL_GetTicks64();
+	melee_timer = *time;
 };
 
 Entity::~Entity() {};
@@ -737,14 +757,14 @@ void Entity::hit(int damage)
 	is_hit = true;
 	hit_pos.x = dstrect.x / settings->getScale() + rand() % (int)(dstrect.w - res->icons_textures["hit"].dstrect.w);
 	hit_pos.y = dstrect.y / settings->getScale() + rand() % (int)(dstrect.h - res->icons_textures["hit"].dstrect.h);
-	hit_timer = SDL_GetTicks64() + 200;
+	hit_timer = *time + 200;
 }
 
 // class Character
-Character::Character(Resources* res, Settings* settings, int gender, unsigned int max_health, unsigned int health, float speed, unsigned int strength, 
-	SDL_Texture* texture, std::string name, std::string weapon_name, unsigned int consumption, unsigned int max_satiety, 
+Character::Character(Resources* res, Settings* settings, Uint64* time, int gender, unsigned int max_health, unsigned int health, float speed, unsigned int strength,
+	std::string tex_name, std::string name, std::string weapon_name, unsigned int consumption, unsigned int max_satiety,
 	unsigned int satiety, unsigned int combat_lvl, unsigned int combat_xp, unsigned int survival_lvl,  unsigned int survival_xp) : 
-	Entity(res, settings, max_health, health, speed, strength, texture, 750), name(name), weapon(weapon), consumption(consumption), 
+	Entity(res, settings, time, max_health, health, speed, strength, tex_name, 750), name(name), weapon(weapon), consumption(consumption), 
 	max_satiety(max_satiety), satiety(satiety), combat_lvl(combat_lvl), survival_lvl(survival_lvl)
 {
 	calc_combat_xp_upgrade();
@@ -904,10 +924,8 @@ Weapon_Shotgun::Weapon_Shotgun(std::string hidden_name, json weapons_data, std::
 };
 
 // class Zombie
-Zombie::Zombie(Resources* res, Settings* settings, unsigned int health, float speed, unsigned int strength, SDL_Texture* texture) :
-	Entity(res, settings, health, health, speed, strength, texture, 1000) 
-{
-};
+Zombie::Zombie(Resources* res, Settings* settings, Uint64* time, unsigned int max_health, unsigned int health, float speed, unsigned int strength, std::string tex_name) :
+	Entity(res, settings, time, max_health, health, speed, strength, tex_name, 1000) {};
 
 Zombie::~Zombie() {};	
 
